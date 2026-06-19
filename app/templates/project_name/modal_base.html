@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}[PROJECT NAME]{% endblock %}</title>
+<style>
+/* Same CSS variables as base.html -- keep in sync */
+:root {
+  --navy:    #1F3864;
+  --blue:    #2F5597;
+  --ltblue:  #BDD7EE;
+  --offwhite:#F4F6FA;
+  --white:   #FFFFFF;
+  --red:     #C0392B;
+  --amber:   #D4A017;
+  --green:   #27AE60;
+  --grey:    #95A5A6;
+  --text:    #1a1a2e;
+  --muted:   #6c7a89;
+  --border:  #d0d8e4;
+  --font-title: Georgia, 'Times New Roman', serif;
+  --font-body:  Calibri, Arial, sans-serif;
+  --radius: 6px;
+  --gap:    16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: rgba(15,20,40,0.75);
+       color: var(--text); font-size: 15px;
+       display: flex; align-items: flex-start; justify-content: center;
+       min-height: 100vh; padding: 40px 16px; }
+.modal-wrap { background: var(--white); border-radius: var(--radius);
+              width: 100%; max-width: 720px; max-height: 85vh;
+              display: flex; flex-direction: column; }
+.modal-header { background: var(--navy); color: var(--white);
+                padding: 16px 24px; border-radius: var(--radius) var(--radius) 0 0;
+                display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.modal-header h2 { font-family: var(--font-title); font-size: 18px; }
+.modal-body { overflow-y: auto; padding: 24px; flex: 1; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border);
+                display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
+/* Form styles (same as base.html) */
+.form-section { margin-bottom: 28px; }
+.form-section h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px;
+                   color: var(--navy); border-bottom: 2px solid var(--navy);
+                   padding-bottom: 4px; margin-bottom: 16px; }
+.field { margin-bottom: 16px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--navy);
+               margin-bottom: 4px; }
+.field input, .field select {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: #e8f0fb; color: var(--navy);
+  font-family: var(--font-body); font-size: 14px;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--blue); background: #fff; }
+.num-fmt { font-variant-numeric: tabular-nums; }
+.btn-p { background: var(--blue); color: var(--white); border: none;
+         padding: 10px 24px; border-radius: var(--radius); font-size: 14px;
+         cursor: pointer; font-family: var(--font-body); }
+.btn-p:hover { background: var(--navy); }
+.btn-s { background: transparent; color: var(--navy); border: 1px solid var(--border);
+         padding: 10px 20px; border-radius: var(--radius); font-size: 14px;
+         cursor: pointer; font-family: var(--font-body); text-decoration: none;
+         display: inline-block; }
+.btn-s:hover { background: var(--ltblue); }
+details { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+summary { padding: 10px 14px; cursor: pointer; font-weight: 600; color: var(--navy); font-size: 13px; }
+details[open] summary { border-bottom: 1px solid var(--border); }
+details > *:not(summary) { padding: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: var(--navy); color: var(--white); padding: 6px 10px; text-align: left;
+     font-size: 11px; text-transform: uppercase; }
+td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<div class="modal-wrap">
+  <div class="modal-header">
+    <h2>{% block modal_title %}{% endblock %}</h2>
+  </div>
+  <div class="modal-body">
+    {% block content %}{% endblock %}
+  </div>
+  <div class="modal-footer">
+    {% block modal_footer %}{% endblock %}
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.num-fmt').forEach(function(el) {
+    function fmtEl(e) {
+      var raw = String(e.value).replace(/,/g, '');
+      var n = parseFloat(raw);
+      if (!isNaN(n) && raw !== '') e.value = n.toLocaleString('en-US');
+    }
+    el.addEventListener('focus', function() { this.value = String(this.value).replace(/,/g, ''); });
+    el.addEventListener('blur', function() { fmtEl(this); });
+    fmtEl(el);
+  });
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
