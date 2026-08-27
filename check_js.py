@@ -1,11 +1,17 @@
 """
-check_js.py -- Verify every JS function called in templates is defined somewhere.
+check_js.py -- Verify every JS function referenced from an inline event
+attribute (onclick=, onsubmit=, etc.) in each template is defined somewhere
+in that same template's own <script> block(s).
 
-Extracts:
-  - Function calls from onclick/onchange/onsubmit/oninput event attributes
-  - Function definitions from <script> blocks in each template
+K1x PMTC Assessment's pages wire most interactivity via addEventListener,
+not inline handlers, so this check's surface is small (results.html's
+modal open/close and form-submit gate are the main ones) -- but it's cheap
+and still catches a truncated/renamed handler.
 
-Flags any called function with no matching definition.
+Rewritten 2026-08-27 -- the previous version assumed the prior project's
+(itsmbvf) multi-template-sharing-globals structure. See PROJECT_STATE.md
+Open Item #3.
+
 Exit 0 = all calls covered; 1 = gaps found.
 """
 
@@ -13,30 +19,23 @@ import re, sys
 from pathlib import Path
 
 BASE_DIR  = Path(__file__).parent
-TEMPLATES = list((BASE_DIR / 'app/templates/itsmbvf').glob('*.html'))
+TEMPLATES = sorted((BASE_DIR / 'app/templates/pmtc').glob('*.html'))
 
-# Known globals: browser built-ins, Chart.js, and other CDN library functions
+# Browser/runtime builtins that can legitimately appear in an inline handler.
 GLOBAL_FUNS = {
-    'alert','confirm','console','setTimeout','setInterval','clearTimeout',
-    'parseInt','parseFloat','Math','JSON','Object','Array','String','Number',
-    'document','window','fetch','Promise','encodeURIComponent',
-    # Chart.js
-    'Chart',
-    # Our own top-level helpers that appear across templates
-    'fmtDollars', 'buildChart', 'showBenefit', 'setPri', 'openBM', 'closeBM',
+    'alert', 'confirm', 'console', 'setTimeout', 'setInterval', 'clearTimeout',
+    'parseInt', 'parseFloat', 'Math', 'JSON', 'Object', 'Array', 'String',
+    'Number', 'document', 'window', 'fetch', 'Promise', 'encodeURIComponent',
 }
 
 def extract_calls(text):
-    """Extract function names from event handler attributes."""
     calls = set()
-    # onclick="fnName(...)" -- grab the function name before the first '('
     for attr in re.findall(r'on\w+="([^"]*)"', text):
         for name in re.findall(r'\b([a-zA-Z_]\w*)\s*\(', attr):
             calls.add(name)
     return calls
 
 def extract_definitions(text):
-    """Extract function names defined in <script> blocks."""
     defs = set()
     for script in re.findall(r'<script[^>]*>(.*?)</script>', text, re.DOTALL):
         for name in re.findall(r'function\s+([a-zA-Z_]\w*)\s*\(', script):
@@ -44,34 +43,35 @@ def extract_definitions(text):
     return defs
 
 def main():
-    # Collect all definitions across all templates (functions are globally available)
-    all_defs = set(GLOBAL_FUNS)
-    for tmpl in TEMPLATES:
-        text = tmpl.read_text(encoding='utf-8', errors='replace')
-        all_defs |= extract_definitions(text)
+    if not TEMPLATES:
+        print('ERROR: no templates found under app/templates/pmtc/')
+        sys.exit(1)
 
-    print('JS function check')
-    print(f'  Functions defined (incl. globals): {len(all_defs)}')
-
+    print('JS function check (per-file, inline event handlers only)')
     fail = False
+    total_calls = 0
     for tmpl in TEMPLATES:
         text = tmpl.read_text(encoding='utf-8', errors='replace')
         calls = extract_calls(text)
-        missing = sorted(c for c in calls if c not in all_defs)
+        defs = extract_definitions(text) | GLOBAL_FUNS
+        missing = sorted(c for c in calls if c not in defs)
+        total_calls += len(calls)
         if missing:
             print(f'  FAIL  {tmpl.name}')
             for m in missing:
-                print(f'    {m}() called but not defined')
+                print(f'    {m}() called but not defined in this file')
             fail = True
         elif calls:
             print(f'  OK    {tmpl.name}  ({len(calls)} call(s) verified)')
+        else:
+            print(f'  OK    {tmpl.name}  (no inline event handlers)')
 
     print()
     if fail:
         print('RESULT: FAIL -- undefined JS functions found')
         sys.exit(1)
     else:
-        print('RESULT: PASS -- all JS function calls are defined')
+        print(f'RESULT: PASS -- all {total_calls} inline JS function call(s) are defined')
         sys.exit(0)
 
 if __name__ == '__main__':

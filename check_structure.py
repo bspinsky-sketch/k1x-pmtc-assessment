@@ -5,9 +5,12 @@ After every verified write, run with --update to store a new baseline.
 On every check run, compares current counts against baseline and flags drops.
 
 Structural markers counted per file:
-  .html templates : CSS class definitions, Jinja2 block/endblock/for/endfor/if/endif tags
-  .py modules     : function definitions (def ), class definitions (class )
-  base.html extra : total CSS rules (count of '{' inside <style> block)
+  .html templates : CSS class definitions (each template's own <style>
+                     block -- there is no shared base.html in this project,
+                     each page is fully self-contained), CSS rule count,
+                     JS function definitions, Jinja2 block/for/if tags
+  .py modules     : function definitions (def ), class definitions
+                     (class ), @bp.route(...) decorator count
 
 Usage:
   python3 check_structure.py          # compare against baseline
@@ -20,20 +23,18 @@ from pathlib import Path
 BASE_DIR  = Path(__file__).parent
 BASELINE  = BASE_DIR / '.check_baseline.json'
 
+# K1x PMTC Assessment file set (Phase 2/3/4). Rewritten 2026-08-27 -- the
+# previous version of this file hardcoded a prior project's (itsmbvf)
+# paths, which don't exist here. See PROJECT_STATE.md Open Item #3.
 FILES = {
-    'app/templates/itsmbvf/base.html':              'html',
-    'app/templates/itsmbvf/calculators.html':       'html',
-    'app/templates/itsmbvf/step1_profile.html':     'html',
-    'app/templates/itsmbvf/step2_challenges.html':  'html',
-    'app/templates/itsmbvf/summary.html':           'html',
-    'app/templates/itsmbvf/assumptions.html':       'html',
-    'app/templates/itsmbvf/submitted.html':         'html',
-    'app/itsmbvf/routes.py':                        'py',
-    'app/itsmbvf/calculator.py':                    'py',
-    'app/itsmbvf/headers.py':                       'py',
-    'app/itsmbvf/report.py':                        'py',
-    'app/itsmbvf/emailer.py':                       'py',
-    'app/itsmbvf/data_capture.py':                  'py',
+    'app/templates/pmtc/profile.html':      'html',
+    'app/templates/pmtc/assessment.html':   'html',
+    'app/templates/pmtc/results.html':      'html',
+    'app/blueprints/pmtc/routes.py':        'py',
+    'app/blueprints/pmtc/calculator.py':    'py',
+    'app/blueprints/pmtc/data_capture.py':  'py',
+    'app/blueprints/pmtc/emailer.py':       'py',
+    'app/blueprints/pmtc/report.py':        'py',
 }
 
 def fingerprint(path_str, kind):
@@ -42,22 +43,20 @@ def fingerprint(path_str, kind):
     fp = {'lines': text.count('\n')}
 
     if kind == 'html':
-        fp['jinja_blocks']   = len(re.findall(r'\{%-?\s*block\b',   text))
-        fp['jinja_endblocks']= len(re.findall(r'\{%-?\s*endblock\b',text))
-        fp['jinja_for']      = len(re.findall(r'\{%-?\s*for\b',     text))
-        fp['jinja_endfor']   = len(re.findall(r'\{%-?\s*endfor\b',  text))
-        fp['jinja_if']       = len(re.findall(r'\{%-?\s*if\b',      text))
-        fp['jinja_endif']    = len(re.findall(r'\{%-?\s*endif\b',   text))
-        fp['css_classes']    = len(re.findall(r'\.([\w-]+)\s*\{',   text))
-        if 'base.html' in path_str:
-            style = re.search(r'<style>(.*?)</style>', text, re.DOTALL)
-            fp['css_rules']  = text.count('{') - text.count('{{')
-            fp['css_class_count'] = len(re.findall(r'\.([\w-]+)', style.group(1))) if style else 0
+        fp['jinja_for']       = len(re.findall(r'\{%-?\s*for\b',     text))
+        fp['jinja_endfor']    = len(re.findall(r'\{%-?\s*endfor\b',  text))
+        fp['jinja_if']        = len(re.findall(r'\{%-?\s*if\b',      text))
+        fp['jinja_endif']     = len(re.findall(r'\{%-?\s*endif\b',   text))
+        fp['css_classes']     = len(re.findall(r'\.([\w-]+)\s*\{',   text))
+        style = re.search(r'<style>(.*?)</style>', text, re.DOTALL)
+        fp['css_rules']       = text.count('{') - text.count('{{')
+        fp['css_class_count'] = len(re.findall(r'\.([\w-]+)', style.group(1))) if style else 0
+        fp['js_functions']    = len(re.findall(r'function\s+\w+\s*\(', text))
 
     elif kind == 'py':
         fp['functions'] = len(re.findall(r'^\s*def \w+', text, re.MULTILINE))
         fp['classes']   = len(re.findall(r'^\s*class \w+', text, re.MULTILINE))
-        fp['routes']    = len(re.findall(r'@\w+_bp\.route\(', text))
+        fp['routes']    = len(re.findall(r'@bp\.route\(', text))
 
     return fp
 

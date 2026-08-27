@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# check_files.sh -- Post-write integrity check for all critical ITSMweb files.
-# Run after any file modification. Exit code 0 = all clear; non-zero = failures found.
+# check_files.sh -- Post-write integrity check for all critical K1x PMTC
+# Assessment files. Run after any file modification.
+# Exit code 0 = all clear; non-zero = failures found.
 # Usage: ./check_files.sh
-# From project root: bash check_files.sh
+# From project root (Application/app): bash check_files.sh
+#
+# Rewritten 2026-08-27 -- the previous version hardcoded a prior project's
+# (itsmbvf/ITSMweb) file paths, which don't exist in this project. See
+# PROJECT_STATE.md Open Item #3.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dir="${BASH_SOURCE[0]}"&&echo "$(dirname "$dir")")" && pwd)"
@@ -54,34 +59,29 @@ check_python() {
   fi
 }
 
-echo "=== ITSMweb file integrity check ==="
+echo "=== K1x PMTC Assessment file integrity check ==="
 echo ""
 
-echo "-- Templates --"
-check_tail "app/templates/itsmbvf/base.html"           150  "</html>"
-check_tail "app/templates/itsmbvf/calculators.html"    180  "endblock"
-check_tail "app/templates/itsmbvf/step1_profile.html"   60  "endblock"
-check_tail "app/templates/itsmbvf/step2_challenges.html" 70 "endblock"
-check_tail "app/templates/itsmbvf/summary.html"        300  "endblock"
-check_tail "app/templates/itsmbvf/assumptions.html"    150  "endblock"
-check_tail "app/templates/itsmbvf/submitted.html"      100  "endblock"
+echo "-- Templates (each fully self-contained -- no shared base.html) --"
+check_tail "app/templates/pmtc/profile.html"     900  "</html>"
+check_tail "app/templates/pmtc/assessment.html"  850  "</html>"
+check_tail "app/templates/pmtc/results.html"     550  "</html>"
 
 echo ""
 echo "-- Python modules --"
-check_python "app/itsmbvf/routes.py"       500
-check_python "app/itsmbvf/calculator.py"   200
-check_python "app/itsmbvf/headers.py"       80
-check_python "app/itsmbvf/report.py"       300
-check_python "app/itsmbvf/emailer.py"      100
-check_python "app/itsmbvf/data_capture.py" 150
+check_python "app/blueprints/pmtc/routes.py"        100
+check_python "app/blueprints/pmtc/calculator.py"    200
+check_python "app/blueprints/pmtc/data_capture.py"  150
+check_python "app/blueprints/pmtc/emailer.py"       100
+check_python "app/blueprints/pmtc/report.py"         60
 
 echo ""
-echo "-- Reference docs --"
-check_tail "CLAUDE.md"           300  "."
-check_tail "CLAUDE_problems.md"  700  "."
-check_tail "PROJECT_STATE.md"    100  "."
-check_tail "STANDING_RULES.md"    80  "."
-check_tail "SESSION_LOG.md"      200  "."
+echo "-- Reference docs (live one level up, in Application/, outside this git repo) --"
+check_tail "../CLAUDE.md"           100  "."
+check_tail "../CLAUDE_problems.md"  700  "."
+check_tail "../PROJECT_STATE.md"     60  "."
+check_tail "../STANDING_RULES.md"    80  "."
+check_tail "../SESSION_LOG.md"       40  "."
 
 echo ""
 echo "-- Structural integrity --"

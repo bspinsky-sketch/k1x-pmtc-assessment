@@ -1,8 +1,8 @@
 """
-check_routes.py -- Route smoke test for ITSMweb.
+check_routes.py -- Route smoke test for the K1x PMTC Assessment.
 
-Uses Flask's built-in test client (no running server needed).
-Seeds a realistic session, hits every page route, and checks:
+Uses Flask's built-in test client (no running server needed). Seeds a
+realistic session, hits every content route, and checks:
   1. HTTP 200 (not 302, not 500)
   2. Expected content substrings are present in the response body
 
@@ -10,8 +10,13 @@ Also spot-checks run_calculation() output keys.
 
 Exit 0 = all checks pass; 1 = any failure.
 
-NOTE: GET / clears the session (fresh-session route), so it is tested
-with a separate client from the seeded-session routes.
+NOTE: GET / always clears the session (fresh-start route) and redirects to
+/profile -- checked separately as a 302, not folded into the content-route
+lists below.
+
+Rewritten 2026-08-27 -- the previous version imported a prior project's
+(itsmbvf) module, session keys, and route list, none of which exist here.
+See PROJECT_STATE.md Open Item #3.
 """
 
 import sys
@@ -26,7 +31,7 @@ except Exception as e:
     sys.exit(1)
 
 try:
-    from app.itsmbvf.calculator import run_calculation, read_defaults
+    from app.blueprints.pmtc.calculator import run_calculation, GOAL_KEYS, CAPABILITY_KEYS, INDUSTRIES
 except Exception as e:
     print(f'FAIL  Could not import calculator: {e}')
     sys.exit(1)
@@ -35,49 +40,30 @@ except Exception as e:
 # Test session data -- keys must match what routes.py stores exactly
 # ---------------------------------------------------------------------------
 PROFILE = {
-    'company_name':     'Acme Corp',
-    'revenue_millions': 500.0,
-    'employees':        2000,
-    'it_headcount':     74,
+    'company': 'Acme Fund Administration',
+    'industry': INDUSTRIES[0],
 }
-
-PRIORITIES = {
-    'ch1': 'High', 'ch2': 'Medium', 'ch3': 'Low',
-    'ch4': 'None', 'ch5': 'High',   'ch6': 'Medium', 'ch7': 'Low',
-}
+GOALS = {key: 2 for key in GOAL_KEYS}          # mid-priority on every goal
+RATINGS = {key: 2 for key in CAPABILITY_KEYS}  # "Standardized" on every capability
 
 try:
-    defs = read_defaults()
-    ASSUMPTION_DEFAULTS = defs.get('assumptions', {})
-    INVESTMENT_DEFAULTS = defs.get('investment', {})
+    RESULTS = run_calculation(PROFILE['company'], PROFILE['industry'], GOALS, RATINGS)
 except Exception as e:
-    print(f'WARN  read_defaults() failed ({e}); using empty dicts')
-    ASSUMPTION_DEFAULTS = {}
-    INVESTMENT_DEFAULTS = {}
+    print(f'FAIL  run_calculation() raised an exception: {e}')
+    sys.exit(1)
 
-try:
-    KPIS = run_calculation(PROFILE, PRIORITIES)
-except Exception as e:
-    print(f'WARN  run_calculation() raised an exception: {e}')
-    print('WARN  Workbook may be unavailable in sandbox; route checks will proceed with empty KPIs')
-    KPIS = {}
+REQUIRED_RESULT_KEYS = [
+    'company', 'industry', 'your_score', 'peer_score', 'peer_count',
+    'band_name', 'band_subtitle', 'narrative', 'strengths', 'gaps',
+    'bar_rows', 'curve', 'capability_scores', 'strength_rank', 'gap_rank',
+]
 
-# Routes that need a pre-seeded session (exclude / -- it clears the session)
+# Routes that need a pre-seeded session
 SEEDED_ROUTES = [
-    ('/challenges',  ['high ticket volume', 'view benefits']),
-    ('/assumptions', ['assumptions', 'save']),
-    ('/summary',     ['roi', 'payback', 'download']),
-    ('/calculators', ['benefit', 'benefit calculators']),
+    ('/assessment',   ['assessment']),
+    ('/results',      ['your score', 'get my report']),
+    ('/edit_profile', ['profile']),
 ]
-
-# Routes that work on an empty session (tested separately)
-FRESH_ROUTES = [
-    ('/',            ['company name', 'annual revenue', 'employees']),
-]
-
-# KPI keys that must be present in run_calculation() output
-REQUIRED_KPI_KEYS = ['roi', 'payback', 'irr', 'npv', 'benefit_3y',
-                     'benefit_ann_avg', 'codn_mo']
 
 
 def check_route(client, route, expected, fail_list):
@@ -102,46 +88,40 @@ def check_route(client, route, expected, fail_list):
 
 def main():
     app = create_app()
-    app.config['TESTING']          = True
-    app.config['WTF_CSRF_ENABLED'] = False
+    app.config['TESTING'] = True
 
     print('Route smoke test')
     failures = []
 
-    # -- KPI key check (skip when workbook unavailable -- KPIS will be empty)
-    if not KPIS:
-        print(f'  WARN  run_calculation() skipped (workbook unavailable in sandbox)')
+    # -- run_calculation() output key check
+    missing_keys = [k for k in REQUIRED_RESULT_KEYS if k not in RESULTS]
+    if missing_keys:
+        print(f'  FAIL  run_calculation() missing result keys: {missing_keys}')
+        failures.append('result_keys')
     else:
-        missing_keys = [k for k in REQUIRED_KPI_KEYS if k not in KPIS]
-        if missing_keys:
-            print(f'  FAIL  run_calculation() missing KPI keys: {missing_keys}')
-            failures.append('kpi_keys')
+        print('  OK    run_calculation() -- all required result keys present')
+
+    # -- GET / clears session and redirects to /profile
+    with app.test_client() as client:
+        resp = client.get('/')
+        if resp.status_code == 302 and resp.headers.get('Location', '').endswith('/profile'):
+            print('  OK    GET / -- redirects to /profile')
         else:
-            print(f'  OK    run_calculation() -- all required KPI keys present')
+            print(f'  FAIL  GET / -- expected 302 to /profile, got {resp.status_code} -> {resp.headers.get("Location", "")}')
+            failures.append('/')
 
-        blank = {'$0', '0', '0.0 months', 'n/a', None, 0}
-        zero_keys = [k for k in REQUIRED_KPI_KEYS
-                     if str(KPIS.get(k, '')).lower() in {str(x).lower() for x in blank}
-                     or KPIS.get(k) == 0]
-        if zero_keys:
-            print(f'  WARN  run_calculation() returned blank/zero for: {zero_keys}')
+    # -- Fresh /profile (no session needed)
+    with app.test_client() as client:
+        check_route(client, '/profile', ['company', 'industry'], failures)
 
-    # -- Test routes that need a seeded session (one client, session seeded once)
+    # -- Seeded routes (profile + goals + ratings + results all present)
     with app.test_client() as client:
         with client.session_transaction() as sess:
-            sess['profile']             = PROFILE
-            sess['priorities']          = PRIORITIES
-            sess['assumptions']         = ASSUMPTION_DEFAULTS
-            sess['investment']          = INVESTMENT_DEFAULTS
-            sess['kpis']                = KPIS
-            sess['assumption_defaults'] = ASSUMPTION_DEFAULTS
-            sess['investment_defaults'] = INVESTMENT_DEFAULTS
+            sess['profile'] = PROFILE
+            sess['goals'] = GOALS
+            sess['ratings'] = RATINGS
+            sess['results'] = RESULTS
         for route, expected in SEEDED_ROUTES:
-            check_route(client, route, expected, failures)
-
-    # -- Test fresh-session routes (separate client so session.clear() doesn't matter)
-    with app.test_client() as client:
-        for route, expected in FRESH_ROUTES:
             check_route(client, route, expected, failures)
 
     print()
@@ -149,7 +129,7 @@ def main():
         print(f'RESULT: FAIL -- {len(failures)} check(s) did not pass')
         sys.exit(1)
     else:
-        print('RESULT: PASS -- all routes and KPI keys verified')
+        print('RESULT: PASS -- all routes and result keys verified')
         sys.exit(0)
 
 

@@ -1,11 +1,16 @@
 """
-check_css.py -- Verify every CSS class used in templates is defined in base.html.
+check_css.py -- Verify every CSS class used in each template is defined in
+that same template's own <style> block.
 
-Extracts:
-  - All class names from HTML/Jinja2 template files (skips Jinja2 expressions)
-  - All CSS selectors from the <style> block in base.html
+K1x PMTC Assessment's three pages (profile/assessment/results) are each
+fully self-contained -- no shared base.html, no {% extends %} (base.html
+and the other starter templates were deleted in Phase 3) -- so CSS coverage
+is checked per-file rather than against one shared stylesheet.
 
-Reports any class present in templates but missing from base.html CSS.
+Rewritten 2026-08-27 -- the previous version of this file assumed the
+prior project's (itsmbvf) base.html + N-child-templates structure, which
+doesn't apply here. See PROJECT_STATE.md Open Item #3.
+
 Exit code 0 = all classes covered; 1 = gaps found.
 """
 
@@ -13,100 +18,80 @@ import re
 import sys
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
-TEMPLATES = list((BASE_DIR / 'app/templates/itsmbvf').glob('*.html'))
-BASE_TEMPLATES = [
-    BASE_DIR / 'app/templates/itsmbvf/base.html',
-    BASE_DIR / 'app/templates/itsmbvf/modal_base.html',
-]
+BASE_DIR  = Path(__file__).parent
+TEMPLATES = sorted((BASE_DIR / 'app/templates/pmtc').glob('*.html'))
 
-# Known false positives -- classes added dynamically via JS, Bootstrap remnants
-# in submitted.html (legacy), or framework-injected classes we don't control
-IGNORE = {
-    # Bootstrap classes in submitted.html (legacy page, not rebuilt)
-    'badge', 'bg-secondary', 'btn-lg', 'btn-outline-secondary', 'btn-sm',
-    'card', 'card-body', 'col-6', 'col-md-4', 'col-lg-3', 'col-lg-9',
-    'col-md-5', 'col-md-7', 'd-flex', 'form-control', 'fs-3', 'fw-bold',
-    'fw-semibold', 'gap-2', 'gap-3', 'h-100', 'mb-3', 'mb-4', 'mb-md-0',
-    'py-3', 'px-5', 'row', 'shadow-sm', 'text-center', 'text-white',
-    'align-items-start', 'align-items-center', 'mb-1', 'mb-2', 'bvf-btn',
-    # Flash categories injected at runtime by Flask
-    'danger', 'success', 'warning', 'info',
-    # Jinja2 conditional classes (dynamic, checked separately)
-    'active', 'done', 'open', 'visible', 'show',
-    # Chart.js canvas -- no CSS class needed
-    # index.html and submitted.html legacy Bootstrap classes (pages not yet rebuilt)
-    'bg-light', 'container', 'h3', 'mt-5', 'p-4', 'text-muted', 'text-success',
-    'mb-0', 'g-3', 'justify-content-center', 'small', 'table', 'table-sm',
-}
+# Classes toggled purely via JS (classList.add/remove, never present in this
+# file's own class="..." attributes at rest) go here if a real FAIL below
+# turns out to be a false positive.
+#
+# 'done' -- applied to completed breadcrumb steps (assessment.html,
+# results.html: class="bc-step done bc-link") but was never given a CSS
+# rule in the approved wireframe either (verified against
+# wireframe/assessment.html and wireframe/results.html directly -- no
+# .done{...} rule exists there, so this is inherited, not a porting
+# defect). Currently a harmless no-op class. 2026-08-27.
+IGNORE = {'done'}
 
-def extract_template_classes():
-    """Extract all static class names from template files."""
+class_attr_re = re.compile(r'class="([^"]*)"')
+jinja_expr_re = re.compile(r'\{[{%]')
+
+script_re = re.compile(r'<script\b[^>]*>.*?</script>', re.DOTALL)
+
+def extract_used_classes(text):
+    # Strip <script> blocks first -- this project's pages build HTML via JS
+    # string concatenation / template literals (e.g. results.html's bar
+    # chart: '<div class="bar-user ' + (ahead ? 'ahead' : 'behind') + ...'),
+    # which the naive class="..." regex below would otherwise misparse as
+    # HTML markup and flag as garbage "used classes". Only literal HTML
+    # markup should count.
+    html_only = script_re.sub('', text)
     used = set()
-    # Match class="..." -- skip anything containing {{ (Jinja2 expression)
-    class_attr = re.compile(r'class="([^"]*)"')
-    jinja_expr = re.compile(r'\{[{%]')
-    for tmpl in TEMPLATES:
-        text = tmpl.read_text(encoding='utf-8', errors='replace')
-        for m in class_attr.finditer(text):
-            val = m.group(1)
-            if jinja_expr.search(val):
-                # Extract the static prefix before any Jinja2 expression
-                static_part = val[:jinja_expr.search(val).start()].strip()
-                for cls in static_part.split():
-                    used.add(cls)
-            else:
-                for cls in val.split():
-                    used.add(cls)
+    for m in class_attr_re.finditer(html_only):
+        val = m.group(1)
+        jm = jinja_expr_re.search(val)
+        static_part = val[:jm.start()] if jm else val
+        for cls in static_part.split():
+            used.add(cls)
     return used
 
-def extract_defined_classes():
-    """Extract all CSS class selectors defined in any base template <style> block."""
-    defined = set()
-    for base_tmpl in BASE_TEMPLATES:
-        if not base_tmpl.exists():
-            continue
-        text = base_tmpl.read_text(encoding='utf-8', errors='replace')
-        style_match = re.search(r'<style>(.*?)</style>', text, re.DOTALL)
-        if not style_match:
-            continue
-        css = style_match.group(1)
-        for m in re.finditer(r'\.([\w-]+)', css):
-            defined.add(m.group(1))
-    if not defined:
-        print('ERROR: No <style> blocks found in any base template')
-        import sys; sys.exit(1)
-    return defined
+def extract_defined_classes(text):
+    style_match = re.search(r'<style>(.*?)</style>', text, re.DOTALL)
+    if not style_match:
+        return set()
+    css = style_match.group(1)
+    return {m.group(1) for m in re.finditer(r'\.([\w-]+)', css)}
+
 def main():
-    used    = extract_template_classes()
-    defined = extract_defined_classes()
+    if not TEMPLATES:
+        print('ERROR: no templates found under app/templates/pmtc/')
+        sys.exit(1)
 
-    # Remove ignored classes
-    used -= IGNORE
+    print('CSS coverage check (per-file -- each page owns its own <style>)')
+    fail = False
+    for tmpl in TEMPLATES:
+        text = tmpl.read_text(encoding='utf-8', errors='replace')
+        used = extract_used_classes(text) - IGNORE
+        defined = extract_defined_classes(text)
+        if not defined:
+            print(f'  FAIL  {tmpl.name}  -- no <style> block found')
+            fail = True
+            continue
+        missing = sorted(used - defined)
+        if missing:
+            print(f'  FAIL  {tmpl.name}  ({len(missing)} missing of {len(used)} used, {len(defined)} defined)')
+            for cls in missing:
+                print(f'    .{cls}')
+            fail = True
+        else:
+            print(f'  OK    {tmpl.name}  ({len(used)} used, {len(defined)} defined)')
 
-    missing = sorted(used - defined)
-
-    print(f'CSS coverage check')
-    print(f'  Template classes found : {len(used)}')
-    print(f'  CSS classes defined    : {len(defined)}')
     print()
-
-    if missing:
-        print(f'MISSING from base.html CSS ({len(missing)}):')
-        for cls in missing:
-            # Show which template(s) use it
-            users = []
-            class_attr = re.compile(r'class="([^"]*)"')
-            for tmpl in TEMPLATES:
-                text = tmpl.read_text(encoding='utf-8', errors='replace')
-                if re.search(r'class="[^"]*\b' + re.escape(cls) + r'\b', text):
-                    users.append(tmpl.name)
-            print(f'  .{cls}  <-- {", ".join(users)}')
-        print()
-        print('RESULT: FAIL -- add missing rules to base.html before deploying')
+    if fail:
+        print('RESULT: FAIL -- add missing rules, or extend IGNORE if truly JS-only, before deploying')
         sys.exit(1)
     else:
-        print('RESULT: PASS -- all template classes are defined in base.html')
+        print('RESULT: PASS -- all template classes are defined in their own <style> block')
         sys.exit(0)
 
 if __name__ == '__main__':
