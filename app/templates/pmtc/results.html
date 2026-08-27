@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K1x Capability Maturity Assessment – Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1E1E1E; --ink-deepest:#0A0A0A; --ink-soft:#3A3A36; --signal:#DFDA7A; --signal-ink:#5A5726;
+  --blue:#11B5E0; --green:#00D89F;
+  --paper:#FFFFFF; --bone:#DFE5E6; --rule:#E4E4DF; --slate:#6E6E68; --slate-light:#C4CBCC;
+  --score-mature: oklch(0.62 0.13 155); --score-adhoc: oklch(0.62 0.13 25); --score-info: oklch(0.62 0.13 255);
+  /* navy/cyan pair lifted from the maturity-curve.html reference component, used only by
+     .curve-card below. Kept separate from the page's own --ink-deepest/--signal so the curve
+     still matches the source component it was adapted from. See DESIGN_DECISIONS.md §34. */
+  --navy-deep:#061627; --curve-cyan:#00A3E0; --curve-cyan-light:#7FD3F0;
+  --font-display:'Outfit',Helvetica,Arial,sans-serif;
+  --font-ui:'Outfit',Helvetica,Arial,sans-serif;
+  --font-mono:'Outfit',Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-ui);background:var(--bone);color:var(--ink);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+.shell{max-width:960px;margin:0 auto;padding:48px 24px 96px;}
+a{color:inherit;}
+
+.breadcrumb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:24px 0 8px;}
+.bc-step{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-light);}
+.bc-step.current{background:var(--signal);color:var(--ink);padding:3px 8px;font-weight:700;}
+.bc-link{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px;}
+.bc-link:hover{text-decoration-color:var(--ink);}
+.bc-sep{color:var(--rule);font-size:11px;}
+
+.page-header{padding:20px 0 32px;}
+.eyebrow{font-family:var(--font-mono);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--slate);margin-bottom:12px;}
+.h1{font-family:var(--font-display);font-size:32px;line-height:1.05;letter-spacing:-.02em;margin-bottom:12px;max-width:720px;}
+.lede{font-size:18px;color:var(--ink-soft);}
+
+/* .your-score-card is now a 3-row grid: row 1 is the ring/band/narrative, row 2 is the peer
+   eyebrow (spanning columns 1–2 on its own line so it never wraps), row 3 is the peer score
+   and its note, baseline-aligned with each other. The band label (col 2, row 1 only) uses
+   align-self:center scoped to row 1's height. No background here — the card sits
+   transparently inside the full-bleed .results-band (see below). See DESIGN_DECISIONS.md
+   §36, §37. */
+.your-score-card{color:#fff;display:grid;grid-template-columns:.85fr .7fr 1.45fr;
+  grid-template-rows:auto auto auto;column-gap:36px;row-gap:0;padding:0 0 32px;
+  border-bottom:1px solid rgba(255,255,255,.14);}
+.ysc-col{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.ysc-col.ysc-band,.ysc-col.ysc-narrative{align-items:flex-start;text-align:left;}
+.ysc-ring{grid-column:1;grid-row:1;}
+.ysc-band{grid-column:2;grid-row:1;align-self:center;}
+.ysc-narrative{grid-column:3;grid-row:1 / 4;align-self:start;}
+/* the peer eyebrow spans both columns 1–2 as its own row so "Where Your Accounting Peer
+   Leaders Ranked" fits on one line (white-space:nowrap) rather than wrapping inside column
+   1's ~238px width. The divider that used to be a border-top rule on the score/note row is
+   gone — the eyebrow line itself now does that visual separation. padding-left:45px shifts
+   the eyebrow's text to start under the ring's left edge specifically, rather than the
+   column's own left edge — the ring is centered within column 1, so its left edge sits 45px
+   in from where this row would otherwise start flush. That 45px is measured at the card's
+   maxed-out width (band-inner hits its 960px max-width at any viewport ≥1008px, which is
+   effectively every normal desktop review of this wireframe); it's a fixed offset rather
+   than something computed from the grid's own fr-track math, so if the column proportions or
+   max-width ever change, re-measure and update this value rather than assuming it still
+   lines up. Peer score (col 1) and its note (col 2) sit in the row below, each set to
+   align-self:center so "2.3" sits centered against the full height of the (possibly
+   two-line) note beside it, rather than sharing a baseline with just its first line. */
+.ysc-peer-eyebrow-row{grid-column:1 / 3;grid-row:2;margin-top:24px;padding-left:45px;
+  white-space:nowrap;}
+.ysc-peer{grid-column:1;grid-row:3;align-self:center;}
+.ysc-peer-note-col{grid-column:2;grid-row:3;align-items:flex-start;text-align:left;
+  align-self:center;}
+
+/* shared eyebrow style — used by "Your Score", "Peer Leaders", and "What This Means" so all
+   three line up; the band column (middle) deliberately has none. */
+.ysc-eyebrow{font-family:var(--font-mono);font-weight:700;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--slate-light);margin-bottom:16px;}
+.ysc-eyebrow.ysc-eyebrow-tight{margin-bottom:8px;}
+
+/* ring */
+.ring-figure{position:relative;width:148px;height:148px;}
+.ring-svg{width:100%;height:100%;transform:rotate(-90deg);}
+.ring-track{fill:none;stroke:rgba(255,255,255,.14);stroke-width:12;}
+.ring-progress{fill:none;stroke:var(--signal);stroke-width:12;stroke-linecap:round;
+  transition:stroke-dashoffset .3s ease;}
+/* "/5" sits inline next to the number rather than stacked below it. Two nested flex
+   containers: .ring-text centers the whole stat block in the ring on both axes; .ring-stat
+   is the row that pairs the number and "/5" on a shared baseline — this split matters because
+   align-items:baseline on .ring-text itself aligns to the text baseline rather than the box
+   center, which pushes the stat block toward the top of the ring. See DESIGN_DECISIONS.md §36. */
+.ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.ring-stat{display:flex;flex-direction:row;align-items:baseline;gap:6px;}
+.ring-num{font-family:var(--font-display);font-size:38px;line-height:1;letter-spacing:-.02em;color:#fff;}
+.ring-den{font-family:var(--font-mono);font-size:14px;letter-spacing:0;color:var(--slate-light);}
+
+/* peer score — "2.3" and "/5" on the same baseline, matching the ring's own num/den pairing.
+   Bumped from 28px to 33px so it reads as a clear step up from before, while still staying
+   visibly secondary to the ring's 38px "1.8". See DESIGN_DECISIONS.md §37. */
+.ysc-peer-stat{display:flex;align-items:baseline;gap:4px;}
+.ysc-peer-stat .stat-num{font-family:var(--font-display);font-size:33px;line-height:1;
+  letter-spacing:-.02em;color:var(--score-info);}
+.ysc-peer-stat .stat-den{font-family:var(--font-display);font-size:14px;color:var(--slate-light);}
+/* sized to match .ysc-narrative-body (13.5px/1.65) per feedback — both are placeholder/
+   dynamic copy blocks and should read as the same weight of text. */
+.ysc-peer-note{font-size:13.5px;line-height:1.65;color:var(--slate-light);}
+
+/* band label */
+.ysc-band-strong{font-weight:800;font-size:20px;line-height:1.25;color:#fff;margin-bottom:6px;}
+.ysc-band-sub{font-size:14px;color:var(--slate-light);}
+
+/* narrative */
+.ysc-narrative-body{font-size:13.5px;line-height:1.65;color:var(--slate-light);}
+
+/* maturity curve card — adapted from maturity-curve.html (see that file's README for the
+   monotone-cubic path, curveAt(), and fit() rationale; not re-explained here). Trimmed to
+   drop the demo controls and hardcode our own stages/labels. No background/radius — sits
+   transparently inside the full-bleed .results-band, like .your-score-card above it. "Your
+   Score" mark is signal yellow for contrast against both the cyan line and the Peer Leaders
+   dot; Peer Leaders is the same muted blue as the "2.3" peer score above so both "peer" data
+   points read as one consistent color; Recommended is black-on-yellow (see .curve-mark rules
+   below) so all three marks read as distinct colors. All chart text drops
+   text-transform:uppercase (the underlying strings were already proper-case — None, Ad-Hoc,
+   Your Score, etc. — uppercase was purely this CSS), with tightened letter-spacing to suit,
+   and JS's LABEL_PX is 12 (see the maturity-curve script below) so every label, tick, and
+   mark name shrinks together through the same fit() math. See DESIGN_DECISIONS.md §36. */
+.curve-card{color:#fff;padding:32px 0;border-bottom:1px solid rgba(255,255,255,.14);}
+.curve-svg{display:block;width:100%;height:auto;overflow:visible;}
+.curve-axis{stroke:rgba(255,255,255,.28);stroke-width:1;}
+.curve-line{stroke:var(--curve-cyan);stroke-width:var(--curve-stroke,4px);stroke-linecap:round;}
+.curve-tick line{stroke:rgba(255,255,255,.28);stroke-width:1;}
+.curve-tick-n{fill:rgba(255,255,255,.55);font-family:var(--font-mono);font-weight:500;
+  font-size:var(--curve-label,10px);letter-spacing:.02em;transform:translateY(1.9em);}
+.curve-tick-name{fill:rgba(255,255,255,.55);font-family:var(--font-mono);font-weight:500;
+  font-size:var(--curve-label,10px);letter-spacing:.02em;transform:translateY(3.15em);}
+.curve-mark circle{fill:var(--signal);stroke:var(--navy-deep);
+  r:var(--curve-dot,7px);stroke-width:var(--curve-stroke,4px);}
+/* Recommended mark is black-on-yellow, reading as its own third color against the yellow
+   "Your Score" dot and the line. Peer Leaders mark uses the same muted blue as the "2.3"
+   peer score above, so the two "peer" data points read as one consistent color across the
+   page. See DESIGN_DECISIONS.md §36. */
+.curve-mark[data-mark="target"] circle{fill:var(--ink-deepest);stroke:var(--signal);}
+.curve-mark[data-mark="peer"] circle{fill:var(--score-info);stroke:var(--navy-deep);r:calc(var(--curve-dot,7px) * .85);}
+.curve-mark text{fill:#fff;font-family:var(--font-mono);font-weight:600;
+  font-size:var(--curve-label,10px);letter-spacing:.03em;transform:translateY(-1.1em);}
+.curve-mark[data-mark="peer"] text{transform:translateY(1.85em);fill:rgba(255,255,255,.75);}
+@media screen{
+  [data-marks="bare"] .curve-mark text{display:none;}
+  [data-ticks="bare"] .curve-tick-name{display:none;}
+}
+.curve-cap{margin-top:14px;}
+.curve-marks{display:flex;flex-wrap:wrap;gap:10px 28px;margin:0;}
+.curve-mark-key{display:flex;align-items:center;gap:8px;}
+.curve-mark-dot{width:9px;height:9px;border-radius:50%;background:var(--signal);}
+.curve-mark-dot[data-mark="target"]{background:var(--ink-deepest);border:2px solid var(--signal);}
+.curve-mark-dot[data-mark="peer"]{background:var(--score-info);}
+.curve-mark-tag{font-family:var(--font-mono);font-weight:600;font-size:11px;letter-spacing:.03em;
+  color:rgba(255,255,255,.55);}
+
+/* section headings */
+.section-heading{font-family:var(--font-mono);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);margin-bottom:16px;}
+
+/* strengths/gaps — "Your Strengths & Opportunities" eyebrow removed (was the
+   .section-heading directly above .sg-table in the markup below). Cards are dark/translucent
+   — light-on-dark instead of the original white cards — since they sit inside the full-bleed
+   .results-band rather than on the page's plain --bone background. See DESIGN_DECISIONS.md §36. */
+.sg-table{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding-top:32px;}
+.sg-col{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:16px;overflow:hidden;}
+.sg-header{background:transparent;padding:14px 18px;border-bottom:2px solid rgba(255,255,255,.5);font-family:var(--font-mono);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#fff;}
+.sg-row{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.16);font-size:13.5px;color:rgba(255,255,255,.9);}
+.sg-delta{font-family:var(--font-mono);font-weight:700;}
+.delta-ahead{color:var(--score-mature);}
+.delta-behind{color:var(--score-adhoc);}
+/* fine print now lives inside each card as a trailing line instead of one shared caption
+   below both columns – see DESIGN_DECISIONS.md §9 for the copy decision. */
+.sg-foot{padding:4px 18px 14px;font-size:10.5px;color:rgba(255,255,255,.55);line-height:1.5;}
+
+/* capability bar chart */
+.chart-legend{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:20px;}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-soft);}
+.legend-swatch{width:13px;height:13px;flex-shrink:0;}
+/* #AFC4DB is NOT a token swap – it's var(--score-info) pre-blended at the exact opacity
+   .bar-peer actually renders at (opacity:.35 over var(--rule)), so the legend swatch matches
+   what the bar really looks like instead of the flatter, more saturated base color. The bar
+   itself is untouched. Resolved via a canvas fillStyle round-trip, not hand-converted from
+   OKLCH. If --score-info or --rule ever change, recompute this the same way. See
+   DESIGN_DECISIONS.md §13. */
+.swatch-peer{background:#AFC4DB;}
+.swatch-behind{background:var(--score-adhoc);}
+.swatch-ahead{background:var(--score-mature);}
+.cap-row{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.cap-label{width:190px;font-size:12.5px;color:var(--ink-soft);text-align:right;flex-shrink:0;line-height:1.3;}
+.bar-area{flex:1;position:relative;height:20px;background:var(--rule);}
+.bar-peer{position:absolute;top:0;left:0;height:100%;background:var(--score-info);opacity:.35;}
+.bar-user{position:absolute;top:25%;left:0;height:50%;}
+.bar-user.behind{background:var(--score-adhoc);}
+.bar-user.ahead{background:var(--score-mature);}
+.x-axis-row{display:flex;gap:14px;margin:8px 0 56px;}
+.x-spacer{width:190px;flex-shrink:0;}
+.x-ticks{flex:1;display:flex;justify-content:space-between;}
+.x-tick{font-family:var(--font-mono);font-size:10px;color:var(--slate-light);}
+
+/* ===== merged in from next-steps.html (see DESIGN_DECISIONS.md §10, §13) ===== */
+
+/* stat grid */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:36px 0 10px;}
+.stat-tile{background:var(--ink-deepest);border-radius:16px;padding:28px 24px;}
+.stat-num{font-family:var(--font-display);font-size:38px;line-height:1;letter-spacing:-.03em;color:var(--signal);margin-bottom:10px;}
+.stat-num sup{font-size:.5em;vertical-align:.6em;}
+.stat-cap{font-size:13px;color:var(--slate-light);line-height:1.5;}
+.placeholder-note{font-family:var(--font-mono);font-size:11px;color:var(--slate);letter-spacing:.05em;margin-bottom:44px;}
+
+/* The Picture1.png backdrop is a true full-bleed band, matching the Profile/Assessment
+   .hero-band pattern — a body-level sibling before .shell, no border-radius, edge to edge.
+   Runs from the very top of the page (behind the breadcrumb and page header too, not just
+   the score card) down through the maturity curve and strengths/opportunities table, ending
+   right before the capability bar chart. Scrim is rgba(8,10,14,.45) — as dark as legibility
+   over Picture1.png needs and no darker; the breadcrumb/header text colors below borrow the
+   same reversed treatment already established in profile.html/assessment.html's .hero-band.
+   See DESIGN_DECISIONS.md §36. */
+.results-band{position:relative;background:#0A0A0A;overflow:hidden;}
+.results-band .bg-photo{position:absolute;inset:0;background-image:url({{ url_for('static', filename='pmtc/picture1.png') }});
+  background-size:cover;background-position:center;}
+.results-band .bg-scrim{position:absolute;inset:0;background:rgba(8,10,14,.45);}
+.band-inner{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px 40px;}
+.results-band .bc-step{color:rgba(255,255,255,.55);}
+.results-band .bc-step.current{background:var(--signal);color:var(--ink);}
+.results-band .bc-link{color:#fff;text-decoration-color:rgba(255,255,255,.4);}
+.results-band .bc-link:hover{text-decoration-color:#fff;}
+.results-band .bc-sep{color:rgba(255,255,255,.35);}
+.results-band .h1{color:#fff;}
+.results-band .lede{color:rgba(255,255,255,.82);}
+
+/* footer nav */
+.page-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:16px;padding-top:24px;border-top:1px solid var(--rule);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;border-radius:999px;min-height:48px;cursor:pointer;text-decoration:none;transition:background .15s,transform .15s;border:none;}
+.btn-primary{background:var(--ink);color:#fff;padding:15px 26px;}
+.btn-primary:hover{background:var(--ink-soft);}
+.btn-secondary{background:transparent;color:var(--ink);border:2px solid var(--ink);padding:13px 24px;}
+.btn-secondary:hover{background:var(--ink);color:#fff;}
+.btn-accent{background:var(--signal);color:var(--ink);padding:15px 26px;}
+.btn-accent:hover{transform:translateY(-2px);}
+
+/* email-capture modal */
+.modal-scrim{position:fixed;inset:0;background:rgba(30,30,30,.62);display:none;align-items:center;justify-content:center;padding:24px;z-index:10;}
+.modal-scrim.open{display:flex;}
+.modal-box{background:var(--paper);width:100%;max-width:440px;padding:32px 32px 28px;position:relative;border:2px solid var(--ink);}
+.modal-close{position:absolute;top:14px;right:14px;width:32px;height:32px;background:transparent;border:none;font-size:20px;line-height:1;cursor:pointer;color:var(--ink);}
+.modal-eyebrow{font-family:var(--font-mono);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);margin-bottom:10px;}
+.modal-h{font-family:var(--font-display);font-size:26px;line-height:1.05;margin-bottom:10px;}
+.modal-body{font-size:13.5px;color:var(--ink-soft);margin-bottom:22px;line-height:1.55;}
+.form-fields{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
+.field-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field-row{display:flex;flex-direction:column;gap:6px;}
+.field-label{font-family:var(--font-mono);font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);}
+.field-input{width:100%;padding:12px 24px;font-family:var(--font-ui);font-size:14.5px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:999px;outline:none;}
+.field-input:focus{outline:2px solid var(--ink);outline-offset:2px;}
+.opt-in{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;}
+.opt-in input{margin-top:3px;accent-color:var(--ink);width:16px;height:16px;flex-shrink:0;}
+.opt-in label{font-size:12px;color:var(--ink-soft);line-height:1.5;}
+.modal-submit{width:100%;}
+.modal-maybe{display:block;text-align:center;margin-top:14px;font-size:12.5px;color:var(--slate);text-decoration:underline;text-decoration-color:var(--rule);background:none;border:none;cursor:pointer;font-family:inherit;}
+.modal-maybe:hover{color:var(--ink);}
+.confirm-block{display:none;text-align:center;padding:8px 0 4px;}
+.confirm-block.show{display:block;}
+.confirm-icon{font-family:var(--font-display);font-size:32px;color:var(--signal-ink);margin-bottom:8px;}
+
+@media (max-width:760px){
+  .sg-table{grid-template-columns:1fr;}
+  .your-score-card{grid-template-columns:1fr;grid-template-rows:none;text-align:center;}
+  .ysc-ring,.ysc-band,.ysc-narrative,.ysc-peer-eyebrow-row,.ysc-peer,.ysc-peer-note-col{
+    grid-column:1;grid-row:auto;align-self:auto;}
+  .ysc-col.ysc-band,.ysc-col.ysc-narrative,.ysc-peer-note-col{align-items:center;text-align:center;}
+  /* the nowrap eyebrow trick, and the 45px left offset that lines it up with the ring, both
+     only apply at the card's full multi-column width — stacked and centered on mobile, the
+     eyebrow needs to behave like every other eyebrow on the page. */
+  .ysc-peer-eyebrow-row{white-space:normal;padding-left:0;}
+  .cap-label,.x-spacer{width:120px;}
+  .stat-grid{grid-template-columns:1fr;}
+  .field-2col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<!-- ===== Full-bleed photo band (Picture1.png), matching the profile/assessment .hero-band
+     pattern — edge to edge, no border-radius, starting at the very top of the page and
+     running underneath the breadcrumb, page header, score card, maturity curve, and
+     strengths/opportunities table. Ends right before the capability bar chart, which stays
+     on the plain --bone background in .shell below (unchanged from §34). Scrim is flat
+     rgba(8,10,14,.45) — as dark as it needs to be to keep white text legible over
+     Picture1.png and no darker. See DESIGN_DECISIONS.md §36. ===== -->
+<div class="results-band">
+  <div class="bg-photo"></div>
+  <div class="bg-scrim"></div>
+  <div class="band-inner">
+
+    <nav class="breadcrumb" aria-label="Progress">
+      <a class="bc-step done bc-link" href="{{ url_for('pmtc.edit_profile') }}">1 · Profile</a>
+      <span class="bc-sep">&rsaquo;</span>
+      <a class="bc-step done bc-link" href="{{ url_for('pmtc.assessment_page') }}">2 · Assessment</a>
+      <span class="bc-sep">&rsaquo;</span>
+      <span class="bc-step current">3 · Results</span>
+    </nav>
+
+    <header class="page-header">
+      <h1 class="h1">Your Private Market Tax Capability Assessment</h1>
+      <p class="lede">Based on your assessment across the 10 capabilities of Private Market Tax maturity:</p>
+    </header>
+
+    <!-- ===== SECTION 1: score callout boxes (Results!C6:C9, F6:F9) =====
+         Full-width card, three columns (ring+peer | band label | narrative). Peer Leaders
+         and its note are now separate row-2 grid items (see CSS) so the note sits in the
+         center column instead of beside the score. Middle column has no eyebrow — the band
+         label uses align-self:center against row 1 (the ring) only, so it centers on the
+         ring's height rather than the eyebrow's. "What This Means" is placeholder eyebrow
+         copy, not yet confirmed — see DESIGN_DECISIONS.md §34. The "Where Your Accounting
+         Peer Leaders Ranked" eyebrow and the "Leaders are the top..." note beside it are
+         both dynamic copy (industry/segment name and peer count will vary once wired to the
+         backend) — hardcoded here for the wireframe. -->
+    <div class="your-score-card">
+      <div class="ysc-col ysc-ring">
+        <div class="ysc-eyebrow">Your Score</div>
+        <div class="ring-figure">
+          <svg class="ring-svg" viewBox="0 0 148 148" aria-hidden="true">
+            <circle class="ring-track" cx="74" cy="74" r="65"></circle>
+            <circle class="ring-progress" id="scoreRingProgress" cx="74" cy="74" r="65"></circle>
+          </svg>
+          <div class="ring-text">
+            <div class="ring-stat">
+              <div class="ring-num" id="scoreRingNum">1.8</div>
+              <div class="ring-den">/5</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ysc-col ysc-band">
+        <div class="ysc-band-strong">{{ results.band_name }}</div>
+        <div class="ysc-band-sub">{{ results.band_subtitle }}</div>
+      </div>
+      <div class="ysc-col ysc-narrative">
+        <div class="ysc-eyebrow">What This Means</div>
+        <p class="ysc-narrative-body">{{ results.narrative }}</p>
+      </div>
+      <div class="ysc-eyebrow ysc-eyebrow-tight ysc-peer-eyebrow-row">Where Your {{ results.industry }} Peer Leaders Ranked</div>
+      <div class="ysc-col ysc-peer">
+        <div class="ysc-peer-stat"><span class="stat-num">{{ results.peer_score }}</span><span class="stat-den">/5</span></div>
+      </div>
+      <div class="ysc-col ysc-peer-note-col">
+        <p class="ysc-peer-note">Leaders are the top percentile out of {{ results.peer_count }} peers.</p>
+      </div>
+    </div>
+
+    <!-- ===== maturity curve (adapted from maturity-curve.html; see that file's README) ===== -->
+    <div class="curve-card">
+      <figure style="margin:0">
+        <svg class="curve-svg" id="curveSvg" viewBox="0 0 620 200" preserveAspectRatio="xMinYMid meet" aria-hidden="true"></svg>
+        <figcaption class="curve-cap">
+          <p class="curve-marks" id="curveKey"></p>
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- ===== SECTION 2: strengths & opportunities (Results!B12:G15) =====
+         "Your Strengths & Opportunities" eyebrow deleted per round-3 feedback (point 6). -->
+    <div class="sg-table">
+      <div class="sg-col">
+        <div class="sg-header">Where you scored highest</div>
+        {% for s in results.strengths %}
+        <div class="sg-row"><span>{{ s.name }}</span><span class="sg-delta delta-ahead">{{ s.score }} / 5</span></div>
+        {% endfor %}
+        <p class="sg-foot">Outscoring peers. Unweighted.</p>
+      </div>
+      <div class="sg-col">
+        <div class="sg-header">Priority areas to improve</div>
+        {% for g in results.gaps %}
+        <div class="sg-row"><span>{{ g.name }}</span><span class="sg-delta {{ 'delta-ahead' if g.delta >= 0 else 'delta-behind' }}">{{ g.delta }}</span></div>
+        {% endfor %}
+        <p class="sg-foot">Biggest gaps. Weighted to your goals.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="shell">
+
+  <!-- ===== SECTION 3a: Capability & Maturity Score (Data!C84:E96) =====
+       Heading text replaced with "Your score compared to your Peer Leaders" (no separate lede
+       line underneath). Legend's "Peer average" relabeled "Peer leaders". See DESIGN_DECISIONS.md §34. -->
+  <div class="section-heading">Your score compared to your Peer Leaders</div>
+  <div class="chart-legend">
+    <div class="legend-item"><div class="legend-swatch swatch-peer"></div><span>Peer leaders ({{ results.industry }}, n={{ results.peer_count }})</span></div>
+    <div class="legend-item"><div class="legend-swatch swatch-behind"></div><span>Your score &ndash; behind peers</span></div>
+    <div class="legend-item"><div class="legend-swatch swatch-ahead"></div><span>Your score &ndash; at or ahead of peers</span></div>
+  </div>
+
+  <div id="chart-rows"></div>
+  <div class="x-axis-row">
+    <div class="x-spacer"></div>
+    <div class="x-ticks">
+      <span class="x-tick">0</span><span class="x-tick">1</span><span class="x-tick">2</span><span class="x-tick">3</span><span class="x-tick">4</span><span class="x-tick">5</span>
+    </div>
+  </div>
+
+  <!-- ===== merged in from next-steps.html – see DESIGN_DECISIONS.md §10, §13.
+       This is a subsection of the Results page now, not a separate page, so it's an <h2>
+       rather than a second <h1> – the page-level headline above stays the only <h1>. ===== -->
+  <header class="page-header">
+    <h2 class="h1">Here's what closing the gap can deliver for you.</h2>
+    <p class="lede">The distance between where you scored and where the top band operates isn't abstract – it shows up directly in cycle time, rework, and what your team has room to do beyond filing.</p>
+  </header>
+
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-num">2.3&times;</div>
+      <div class="stat-cap">Faster average cycle time reported by firms operating at Level 4+ maturity</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-num">60<sup>%</sup></div>
+      <div class="stat-cap">Fewer manual touchpoints once validation and integration are automated end to end</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-num">1 in 3</div>
+      <div class="stat-cap">Top-band firms use their K-1 data for advisory work, not just filing</div>
+    </div>
+  </div>
+  <p class="placeholder-note">Placeholder figures – to be sourced and agreed with K1x before this goes live.</p>
+
+  <div class="page-footer">
+    <a class="btn btn-secondary" href="{{ url_for('pmtc.assessment_page') }}">&larr; Back</a>
+    <button class="btn btn-accent" onclick="openModal()">Get My Report</button>
+  </div>
+
+</div>
+
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+
+    <div id="formState">
+      <div class="modal-eyebrow">Full Report</div>
+      <h2 class="modal-h">Get your full report.</h2>
+      <p class="modal-body">We'll email your personalized maturity report, the capability-by-capability breakdown, and the full set of recommendations for every dimension.</p>
+
+      <form id="gateForm" onsubmit="return submitGate(event)">
+        <div class="form-fields">
+          <div class="field-2col">
+            <div class="field-row">
+              <label class="field-label" for="fname">First name</label>
+              <input class="field-input" type="text" id="fname" required>
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="lname">Last name</label>
+              <input class="field-input" type="text" id="lname" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="mcompany">Company</label>
+            <input class="field-input" type="text" id="mcompany" value="{{ results.company }}" required>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="memail">Work email</label>
+            <input class="field-input" type="email" id="memail" placeholder="you@firm.com" required>
+          </div>
+        </div>
+        <div class="opt-in">
+          <input type="checkbox" id="optin">
+          <label for="optin">Keep me updated on K1x product news and events.</label>
+        </div>
+        <button type="submit" class="btn btn-accent modal-submit">Email Report</button>
+        <button type="button" class="modal-maybe" onclick="closeModal()">Maybe later</button>
+      </form>
+    </div>
+
+    <div id="confirmState" class="confirm-block">
+      <div class="confirm-icon">&check;</div>
+      <h2 class="modal-h">Report on its way.</h2>
+      <p class="modal-body">We've sent your personalized report to the email address you provided. Check your inbox in a few minutes.</p>
+      <button type="button" class="btn btn-secondary modal-submit" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---- Score ring (Section 1) ---- */
+(function(){
+  var YOUR_SCORE = {{ results.your_score }}, MAX = 5;
+  var circle = document.getElementById('scoreRingProgress');
+  var r = circle.r.baseVal.value;
+  var circumference = 2 * Math.PI * r;
+  circle.style.strokeDasharray = circumference.toFixed(2);
+  circle.style.strokeDashoffset = (circumference * (1 - YOUR_SCORE / MAX)).toFixed(2);
+  document.getElementById('scoreRingNum').textContent = YOUR_SCORE.toFixed(1);
+})();
+
+/* ---- Maturity curve (Section 1) ----
+   Adapted from maturity-curve.html – trimmed to drop the interactive demo controls, and
+   wired to assessment.html's own six-level scale (LEVEL_NAMES) rather than the source
+   component's generic stage names. Marks per Ben's Aug 2026 direction: Your Score (1.8),
+   Peer Leaders (2.3 – matches the Peer Leaders score now shown under the ring above), and
+   a fixed Recommended mark (3.6). See DESIGN_DECISIONS.md §34. */
+(function(){
+  var CURVE = { left: 48, right: 572, top: 18, bottom: 146 };
+  var LABEL_PX = 12, STROKE_PX = 4, DOT_PX = 7;
+  var MARKS_MIN = 842, TICKS_MIN = 620;
+  var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var doublingHeight = function(level, top){ return (Math.pow(2, level) - 1) / (Math.pow(2, top) - 1); };
+
+  function curveSlopes(points){
+    var secants = points.slice(1).map(function(p, i){ return (p.y - points[i].y) / (p.x - points[i].x); });
+    var m = points.map(function(p, i){
+      return i === 0 ? secants[0]
+        : i === points.length - 1 ? secants[secants.length - 1]
+        : (secants[i - 1] + secants[i]) / 2;
+    });
+    secants.forEach(function(d, i){
+      if (d === 0) { m[i] = 0; m[i + 1] = 0; return; }
+      var a = m[i] / d, b = m[i + 1] / d;
+      var sq = a * a + b * b;
+      if (sq > 9) {
+        var scale = 3 / Math.sqrt(sq);
+        m[i] = scale * a * d; m[i + 1] = scale * b * d;
+      }
+    });
+    return m;
+  }
+  function curvePath(points){
+    var m = curveSlopes(points);
+    var r = function(n){ return Number(n.toFixed(2)); };
+    return points.map(function(p, i){
+      if (i === 0) return 'M' + r(p.x) + ' ' + r(p.y);
+      var from = points[i - 1];
+      var third = (p.x - from.x) / 3;
+      return 'C' + r(from.x + third) + ' ' + r(from.y + m[i - 1] * third) + ' '
+        + r(p.x - third) + ' ' + r(p.y - m[i] * third) + ' ' + r(p.x) + ' ' + r(p.y);
+    }).join(' ');
+  }
+  function curveAt(points, at){
+    var m = curveSlopes(points);
+    var i = Math.min(Math.max(Math.floor(at), 0), points.length - 2);
+    var t = at - i;
+    var a = points[i], b = points[i + 1];
+    var run = b.x - a.x;
+    return {
+      x: a.x + run * t,
+      y: a.y * Math.pow(1 - t, 2) * (1 + 2 * t) + b.y * t * t * (3 - 2 * t)
+        + run * m[i] * t * Math.pow(1 - t, 2) - run * m[i + 1] * t * t * (1 - t)
+    };
+  }
+
+  function curveChart(svg, keyEl, opts){
+    var stages = opts.stages, height = opts.height || doublingHeight, labels = opts.labels;
+    var top = stages.length - 1;
+    var step = (CURVE.right - CURVE.left) / top;
+    var points = stages.map(function(name, i){
+      return { level: i, name: name, x: CURVE.left + i * step,
+        y: CURVE.bottom - height(i, top) * (CURVE.bottom - CURVE.top) };
+    });
+    var fitAt = 0;
+    function fit(){
+      var width = Math.round(svg.getBoundingClientRect().width);
+      if (!width || width === fitAt) return;
+      fitAt = width;
+      var toUnits = 620 / width;
+      var label = LABEL_PX * toUnits;
+      svg.style.setProperty('--curve-label', label.toFixed(2) + 'px');
+      svg.style.setProperty('--curve-stroke', (STROKE_PX * toUnits).toFixed(2) + 'px');
+      svg.style.setProperty('--curve-dot', (DOT_PX * toUnits).toFixed(2) + 'px');
+      var named = width >= MARKS_MIN;
+      svg.dataset.marks = named ? 'named' : 'bare';
+      var levelled = width >= TICKS_MIN;
+      svg.dataset.ticks = levelled ? 'named' : 'bare';
+      var t = Math.min(0, CURVE.top - Math.max(named ? 1.82 * label : 0, 11) - 2);
+      var b = Math.max(190, CURVE.bottom + (levelled ? 3.6 : 2.4) * label);
+      svg.setAttribute('viewBox', '0 ' + t.toFixed(1) + ' 620 ' + (b - t).toFixed(1));
+    }
+    var anchor = function(p){
+      return p.x > CURVE.right - 70 ? 'end' : p.x < CURVE.left + 70 ? 'start' : 'middle';
+    };
+    /* All three marks may be fractional (Your Score and Recommended included, not just the
+       benchmark), so every mark is placed with curveAt() rather than only the peer mark –
+       a deliberate divergence from the source component, which assumed now/target were
+       always whole stage indices. */
+    function render(state){
+      var marks = [];
+      ['now', 'target', 'peer'].forEach(function(key){
+        var v = state[key];
+        if (v === null || v === undefined) return;
+        var pos = curveAt(points, v);
+        pos.mark = key;
+        pos.text = labels[key];
+        marks.push(pos);
+      });
+
+      svg.innerHTML =
+        '<line class="curve-axis" x1="' + CURVE.left + '" y1="' + CURVE.bottom + '" x2="' + CURVE.right + '" y2="' + CURVE.bottom + '"></line>' +
+        '<path class="curve-line" d="' + curvePath(points) + '" fill="none"></path>' +
+        points.map(function(p){
+          return '<g class="curve-tick" data-level="' + p.level + '">' +
+            '<line x1="' + p.x + '" y1="' + CURVE.bottom + '" x2="' + p.x + '" y2="' + (CURVE.bottom + 6) + '"></line>' +
+            '<text class="curve-tick-n" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">' + p.level + '</text>' +
+            '<text class="curve-tick-name" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">' + esc(p.name) + '</text>' +
+            '</g>';
+        }).join('') +
+        marks.map(function(p){
+          return '<g class="curve-mark" data-mark="' + p.mark + '">' +
+            '<circle cx="' + p.x.toFixed(2) + '" cy="' + p.y.toFixed(2) + '"></circle>' +
+            '<text x="' + p.x.toFixed(2) + '" y="' + p.y.toFixed(2) + '" text-anchor="' + anchor(p) + '">' + esc(p.text) + '</text>' +
+            '</g>';
+        }).join('');
+
+      keyEl.innerHTML = marks.map(function(p){
+        return '<span class="curve-mark-key">' +
+          '<span class="curve-mark-dot" data-mark="' + p.mark + '" aria-hidden="true"></span>' +
+          '<span class="curve-mark-tag">' + esc(p.text) + '</span></span>';
+      }).join('');
+      fit();
+    }
+    if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(svg.parentElement);
+    window.addEventListener('resize', fit);
+    return { render: render, fit: fit };
+  }
+
+  var chart = curveChart(document.getElementById('curveSvg'), document.getElementById('curveKey'), {
+    stages: ['None', 'Ad-Hoc', 'Standardized', 'Automated', 'Integrated', 'Autonomous'],
+    labels: { now: 'Your Score', target: 'Recommended', peer: 'Peer Leaders' }
+  });
+  chart.render({ now: {{ results.curve.now }}, target: {{ results.curve.target }}, peer: {{ results.curve.peer }} });
+})();
+
+/* ---- Chart 1: Capability & Maturity Score (Assessment page / Data!C84:E96) ---- */
+var rows = {{ results.bar_rows | tojson }};
+
+var chartContainer = document.getElementById('chart-rows');
+rows.forEach(function(r){
+  var ahead = r.you >= r.peer; /* a tie is a win */
+  var row = document.createElement('div');
+  row.className = 'cap-row';
+  row.innerHTML =
+    '<div class="cap-label">' + r.name + '</div>' +
+    '<div class="bar-area">' +
+      '<div class="bar-peer" style="width:' + (r.peer/5*100) + '%"></div>' +
+      '<div class="bar-user ' + (ahead ? 'ahead' : 'behind') + '" style="width:' + (r.you/5*100) + '%"></div>' +
+    '</div>';
+  chartContainer.appendChild(row);
+});
+
+/* ---- merged in from next-steps.html (see DESIGN_DECISIONS.md §10, §13) ---- */
+function openModal(){
+  document.getElementById('modalScrim').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modalScrim').classList.remove('open');
+}
+function submitGate(e){
+  e.preventDefault();
+  var payload = {
+    first_name: document.getElementById('fname').value,
+    last_name: document.getElementById('lname').value,
+    company: document.getElementById('mcompany').value,
+    email: document.getElementById('memail').value,
+    opt_in: document.getElementById('optin').checked
+  };
+  fetch("{{ url_for('pmtc.lead_capture') }}", {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).catch(function(){ /* best-effort — UI proceeds either way */ });
+  document.getElementById('formState').style.display = 'none';
+  document.getElementById('confirmState').classList.add('show');
+  return false;
+}
+document.getElementById('modalScrim').addEventListener('click', function(e){
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>

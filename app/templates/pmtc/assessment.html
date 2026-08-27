@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K1x Capability Maturity Assessment – Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1E1E1E; --ink-deepest:#0A0A0A; --ink-soft:#3A3A36; --signal:#DFDA7A; --signal-ink:#5A5726;
+  --blue:#11B5E0; --green:#00D89F;
+  --paper:#FFFFFF; --bone:#DFE5E6; --rule:#E4E4DF; --slate:#6E6E68; --slate-light:#C4CBCC;
+  --font-display:'Outfit',Helvetica,Arial,sans-serif;
+  --font-ui:'Outfit',Helvetica,Arial,sans-serif;
+  --font-mono:'Outfit',Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-ui);background:var(--bone);color:var(--ink);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+.shell{max-width:960px;margin:0 auto;padding:48px 24px 96px;}
+a{color:inherit;}
+
+/* breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:24px 0 8px;}
+.bc-step{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-light);}
+.bc-step.current{background:var(--signal);color:var(--ink);padding:3px 8px;font-weight:700;}
+.bc-link{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px;}
+.bc-link:hover{text-decoration-color:var(--ink);}
+.bc-sep{color:var(--rule);font-size:11px;}
+
+/* header — no eyebrow (§19); rule kept for consistency with profile.html/results.html
+   even though nothing currently uses it on this page */
+.page-header{padding:24px 0 28px;}
+.eyebrow{font-family:var(--font-mono);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--slate);margin-bottom:12px;}
+.h1{font-family:var(--font-display);font-size:34px;line-height:1.05;letter-spacing:-.02em;margin-bottom:16px;}
+
+/* dark hero band behind breadcrumb+header, holding a horizontal slice of Picture1.png with a
+   scrim for legible reversed text — see DESIGN_DECISIONS.md §35. */
+.hero-band{position:relative;background:#0A0A0A;overflow:hidden;}
+.hero-band .bg-photo{position:absolute;inset:0;background-image:url({{ url_for('static', filename='pmtc/picture1.png') }});background-size:cover;background-position:center;}
+.hero-band .bg-scrim{position:absolute;inset:0;background:linear-gradient(100deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.4) 45%,rgba(0,0,0,.18) 100%);}
+.hero-inner{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px;}
+.hero-band .bc-step{color:rgba(255,255,255,.55);}
+.hero-band .bc-step.current{background:var(--signal);color:var(--ink);}
+.hero-band .bc-link{color:#fff;text-decoration-color:rgba(255,255,255,.4);}
+.hero-band .bc-link:hover{text-decoration-color:#fff;}
+.hero-band .bc-sep{color:rgba(255,255,255,.35);}
+.hero-band .h1{color:#fff;}
+.hero-band .lede{color:rgba(255,255,255,.82);}
+.lede{font-size:18px;color:var(--ink-soft);}
+
+.section-label{font-family:var(--font-mono);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);padding-bottom:10px;border-bottom:2px solid var(--ink);margin-bottom:8px;}
+
+/* capability cards — all 12 visible from load; single-open accordion with
+   collapse-on-answer, matching Profile's live pattern (§24/§25), ported here per §27.
+   This REPLACES §18's "stay open, multiple open allowed" model, which itself had been
+   adopted wholesale from Profile's older §16 behavior. */
+.goal-card{border-bottom:1px solid var(--rule);}
+.goal-row-head{display:flex;align-items:center;gap:10px;padding:16px 0;}
+.goal-card[data-clickable="true"] .goal-row-head{cursor:pointer;}
+.goal-row-head:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+.gc-chevron{visibility:hidden;display:inline-flex;width:11px;height:11px;flex-shrink:0;color:var(--ink);transition:transform .18s ease;}
+.gc-chevron svg{width:100%;height:100%;}
+.goal-card[data-clickable="true"] .gc-chevron{visibility:visible;}
+.goal-card[data-state="open"] .gc-chevron{transform:rotate(90deg);}
+.gc-name{font-weight:700;font-size:15.5px;flex:1;transition:font-size .15s,font-weight .15s;}
+.goal-card[data-state="open"] .gc-name{font-weight:800;font-size:22px;}
+.gc-score{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);flex-shrink:0;}
+.gc-score[data-scored="true"]{color:var(--ink);}
+.goal-card[data-state="open"] .gc-score{display:none;}
+/* Collapsed-row sparkline (Profile parking lot §17 item 3, ported to Assessment only —
+   see DESIGN_DECISIONS.md §21). Same visual grammar as the real slider at a fraction of
+   the scale: filled segments up to and including the answer, light gray beyond it, no
+   labels/ticks. Only shown collapsed — the full slider already does this job when open,
+   so showing both would be redundant. Not-yet-reached/unscored rows show every segment
+   unfilled rather than hiding the sparkline outright, so every collapsed row reads the
+   same way at a glance. */
+.gc-spark{display:flex;gap:2px;width:64px;height:7px;flex-shrink:0;}
+.goal-card[data-state="open"] .gc-spark{display:none;}
+.gc-spark i{flex:1;background:var(--slate-light);border-radius:1px;}
+.gc-spark i[data-filled="true"]{background:var(--ink);}
+.goal-body{display:none;padding-bottom:22px;}
+.goal-card[data-state="open"] .goal-body{display:block;}
+.goal-slot{width:100%;}
+/* No max-width (§27): the question now runs the full interface width, matching
+   Profile's description block. */
+.gc-question{font-size:18px;color:var(--ink);margin:-4px 0 16px;}
+
+.page-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:40px;padding-top:24px;border-top:1px solid var(--rule);flex-wrap:wrap;}
+.validation-msg{font-family:var(--font-mono);font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--signal-ink);min-height:1em;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;border-radius:999px;min-height:48px;cursor:pointer;text-decoration:none;transition:background .15s;border:none;}
+.btn-primary{background:var(--ink);color:#fff;padding:15px 26px;}
+.btn-primary:hover{background:var(--ink-soft);}
+.btn-secondary{background:transparent;color:var(--ink);border:2px solid var(--ink);padding:13px 24px;}
+.btn-secondary:hover{background:var(--ink);color:#fff;}
+
+/* ============================================================
+   segment-slider component (vendored, inlined per this project's
+   one-file-per-page convention) – see DESIGN_DECISIONS.md §15/§18.
+   Source: PMTC assessment/segment-slider/segment-slider.css
+   ============================================================ */
+/* segment-slider - a range input painted as discrete segments.
+ *
+ * The control underneath is a real <input type="range">, held transparent. It
+ * carries the drag, the keyboard and the accessibility semantics; every mark you
+ * can see is painted by this stylesheet. That separation is the whole point: it
+ * is what lets a slider nobody has moved look unmoved, rather than parked on the
+ * first state of the scale.
+ *
+ * Everything colour- and size-ish is a custom property, so this drops into an
+ * existing design system by overriding the block below - either globally on
+ * :root or per instance on the .sseg element.
+ */
+
+.sseg {
+  /* the run */
+  --sseg-seg-h: 15px;              /* height of one segment */
+  --sseg-seg-gap: 4px;             /* space between segments */
+  --sseg-empty: #DDE4EA;           /* a segment not yet reached */
+  --sseg-empty-line: #A9B6C2;      /* its underline */
+  --sseg-passed: #123A63;          /* a segment below the answer */
+  --sseg-on: #00A3E0;              /* the answered segment itself */
+  --sseg-passed-line: #0C2340;     /* underline for both of those */
+
+  /* text */
+  --sseg-ink: #0C2340;             /* the answer, stated */
+  --sseg-muted: #5B6B7C;           /* labels, and the answer while unset */
+  --sseg-accent-ink: #00699A;      /* the level name; accent that passes on white */
+  --sseg-focus: #00699A;           /* the focus ring */
+  --sseg-cond: inherit;            /* a condensed face, if the system has one */
+
+  /* the stepper buttons and the description rule */
+  --sseg-field: #C9D4DE;
+  --sseg-surface: #FFFFFF;
+  --sseg-surface-2: #F4F7F9;
+
+  max-width: 620px;
+}
+
+/* ---------- the answer, stated ---------------------------------------------
+   Two forms. `readout: 'label'` states the answer in words on one line, for a
+   scale whose states are sentences. `readout: 'badge'` states it as a numeral
+   with the state's name beside it, for a scale whose states are levels. */
+
+.sseg-said {
+  margin: 0;
+  font-size: clamp(16px, 1.8vw, 18px);
+  font-weight: 500;
+  color: var(--sseg-ink);
+}
+/* Unanswered, the standing-in copy is not the answer, and must not read as one. */
+.sseg[data-set="false"] .sseg-said { color: var(--sseg-muted); }
+
+.sseg-top {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.sseg-badge {
+  margin: 0; display: flex; align-items: baseline; gap: 8px;
+  flex-wrap: wrap; min-width: 0;
+}
+.sseg-num {
+  font-weight: 700; font-size: clamp(30px, 3.6vw, 38px); line-height: 1;
+  color: var(--sseg-ink);
+}
+.sseg[data-set="false"] .sseg-num { color: var(--sseg-empty-line); }
+/* Nothing chosen yet is a thin rule one digit wide, set on the digit's optical
+   centre. An en dash at the numeral's own size and weight paints a slab, which
+   reads as a redaction bar or a loading skeleton rather than an empty slot. */
+.sseg-empty {
+  display: inline-block; width: .6em; height: 2px;
+  background: var(--sseg-empty-line); vertical-align: .34em;
+}
+.sseg-of { font-size: 14px; color: var(--sseg-muted); }
+.sseg-name {
+  font-family: var(--sseg-cond); font-weight: 600;
+  font-size: clamp(12px, 1.4vw, 13px); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--sseg-accent-ink); margin-left: 6px;
+}
+.sseg[data-set="false"] .sseg-name { color: var(--sseg-muted); }
+
+/* ---------- the stepper ----------------------------------------------------
+   For the respondent who would rather not drag anything, and the one on a
+   trackpad. */
+
+.sseg-step { margin: 0; display: flex; gap: 6px; flex: none; }
+.sseg-btn {
+  width: 34px; height: 34px; border: 1px solid var(--sseg-field);
+  background: var(--sseg-surface); color: var(--sseg-ink);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.sseg-btn:hover { border-color: var(--sseg-passed-line); background: var(--sseg-surface-2); }
+.sseg-btn:disabled { color: var(--sseg-field); cursor: default; background: var(--sseg-surface); }
+.sseg-btn:disabled:hover { border-color: var(--sseg-field); }
+
+/* ---------- the run itself -------------------------------------------------
+   A transparent range laid over painted segments. The range is inset past the
+   top and bottom of the paint so the whole band is a hit target, not just the
+   15px of ink. */
+
+.sseg-wrap { position: relative; margin-top: 12px; }
+.sseg-input {
+  position: absolute; inset: -11px 0; width: 100%; height: auto; margin: 0;
+  opacity: 0; cursor: pointer;
+  appearance: none; -webkit-appearance: none; background: none;
+  /* The horizontal gesture belongs to the slider and the vertical one to the
+     page, so a finger that lands on the run can still scroll past it. Without
+     this the browser takes the whole gesture and the drag never fires. */
+  touch-action: pan-y;
+}
+/* The thumb is invisible but still has to be draggable, and on a touch screen
+   that means finger-sized. */
+.sseg-input::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; }
+.sseg-input::-moz-range-thumb { width: 34px; height: 34px; border: 0; }
+
+.sseg-segs {
+  display: grid; gap: var(--sseg-seg-gap);
+  grid-template-columns: repeat(var(--sseg-count), 1fr);
+  /* The paint passes every press through to the range underneath. */
+  pointer-events: none;
+}
+.sseg-seg {
+  height: var(--sseg-seg-h);
+  background: var(--sseg-empty);
+  border-bottom: 2px solid var(--sseg-empty-line);
+}
+.sseg-seg[data-passed="true"] {
+  background: var(--sseg-passed); border-bottom-color: var(--sseg-passed-line);
+}
+.sseg-seg[data-on="true"] {
+  background: var(--sseg-on); border-bottom-color: var(--sseg-passed-line);
+}
+
+/* The ring goes round the whole run rather than round the segment under the
+   handle: unanswered, there is no segment under the handle to ring. */
+.sseg-input:focus-visible ~ .sseg-segs {
+  outline: 2px solid var(--sseg-focus); outline-offset: 3px;
+}
+
+/* ---------- what sits under the run ---------------------------------------- */
+
+/* Tick labels, one per segment, on the segment's own centre. */
+.sseg-ticks {
+  margin: 7px 0 0; display: grid; gap: var(--sseg-seg-gap);
+  grid-template-columns: repeat(var(--sseg-count), 1fr);
+}
+.sseg-tick {
+  font-family: var(--sseg-cond); font-weight: 600; font-size: 12px;
+  letter-spacing: .1em; color: var(--sseg-muted); text-align: center;
+}
+.sseg-tick[data-on="true"] { color: var(--sseg-ink); }
+
+/* The two ends named, for a scale too wordy to tick every stop of. */
+.sseg-ends {
+  margin: 8px 0 0; display: flex; justify-content: space-between; gap: 16px;
+  font-size: 12px; color: var(--sseg-muted);
+}
+
+/* The description of wherever the handle is, and only that one.
+   min-height is load-bearing: it stops the page moving under a reader who is
+   mid-drag. Tightened to exactly two lines' worth (2 × 1.6 line-height × 18px font,
+   in em relative to that font-size) per §27 — it was sized closer to three when the
+   text ran smaller, before §20 bumped it to 18px. A description longer than two lines
+   still wraps and grows the box; this only trims the reserved space when it doesn't
+   need to. */
+.sseg-read {
+  margin-top: 16px; border-left: 3px solid var(--sseg-on); padding-left: 15px;
+  font-size: 18px; min-height: 3.2em;
+}
+.sseg[data-set="false"] .sseg-read { border-left-color: var(--sseg-field); }
+.sseg-read p { margin: 0; line-height: 1.6; text-wrap: pretty; }
+.sseg-read p + p { margin-top: 9px; }
+.sseg-read .sseg-prompt { color: var(--sseg-muted); }
+
+
+/* K1x palette mapped onto the component's styling hooks (§15),
+   plus contrast + full-width + label-size fixes from §16 */
+.sseg{
+  --sseg-on: var(--ink);
+  --sseg-passed: var(--ink-soft);
+  --sseg-passed-line: var(--ink);
+  --sseg-empty: var(--slate-light);
+  --sseg-empty-line: var(--slate);
+  --sseg-ink: var(--ink);
+  --sseg-muted: var(--slate);
+  --sseg-accent-ink: var(--signal-ink);
+  --sseg-focus: var(--ink);
+  --sseg-cond: var(--font-mono);
+  --sseg-field: var(--rule);
+  --sseg-surface: var(--paper);
+  --sseg-surface-2: var(--bone);
+  max-width: none;
+  width: 100%;
+}
+/* said-label: smaller than the goal name (§16), and repositioned per-value by JS
+   to center over the selected segment – position:relative keeps it in flow so
+   nothing else has to reflow when it shifts. */
+.sseg-said{position:relative;display:inline-block;font-size:14px;font-weight:600;}
+/* ticks dimmed relative to the segments themselves – the run is the click target,
+   the labels are just captions (§16). Selected tick darkened to full --ink + bolded
+   (§21) for more contrast against the rest, without lightening the unselected tick –
+   that would revive the low-contrast-against-background issue §16 fixed. */
+.sseg-tick{color:var(--slate);}
+.sseg-tick[data-on="true"]{color:var(--ink);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="hero-band">
+  <div class="bg-photo"></div>
+  <div class="bg-scrim"></div>
+  <div class="hero-inner">
+    <nav class="breadcrumb" aria-label="Progress">
+      <a class="bc-step done bc-link" href="{{ url_for('pmtc.edit_profile') }}">1 · Profile</a>
+      <span class="bc-sep">&rsaquo;</span>
+      <span class="bc-step current">2 · Assessment</span>
+      <span class="bc-sep">&rsaquo;</span>
+      <span class="bc-step">3 · Results</span>
+    </nav>
+
+    <header class="page-header">
+      <h1 class="h1">Rate where you stand today.</h1>
+      <p class="lede">Tell us about your current practices across these ten dimensions. Each selection provides a description you can compare with to assure that you are selecting the best match to your current environment.</p>
+    </header>
+  </div>
+</div>
+<div class="shell">
+<form id="assessmentForm" method="post" action="{{ url_for('pmtc.assessment_page') }}">
+
+  <div id="cap-list"></div>
+
+  <div class="page-footer">
+    <a class="btn btn-secondary" href="{{ url_for('pmtc.edit_profile') }}">&larr; Back</a>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <p class="validation-msg" id="startValidationMsg" role="status" aria-live="polite"></p>
+      <button type="button" class="btn btn-primary" id="nextBtn">Next &rarr;</button>
+    </div>
+  </div>
+
+  <input type="hidden" id="rating_document_intake" name="rating_document_intake">
+  <input type="hidden" id="rating_inventory_management" name="rating_inventory_management">
+  <input type="hidden" id="rating_data_extraction" name="rating_data_extraction">
+  <input type="hidden" id="rating_data_validation" name="rating_data_validation">
+  <input type="hidden" id="rating_data_review" name="rating_data_review">
+  <input type="hidden" id="rating_tax_analysis_reporting" name="rating_tax_analysis_reporting">
+  <input type="hidden" id="rating_integration" name="rating_integration">
+  <input type="hidden" id="rating_resource_structure" name="rating_resource_structure">
+  <input type="hidden" id="rating_advisory" name="rating_advisory">
+  <input type="hidden" id="rating_governance_trust" name="rating_governance_trust">
+
+</form>
+</div>
+
+<script>
+/* segment-slider - a range input painted as discrete segments, which can start
+ * unanswered.
+ *
+ * No dependencies, no build step. Drop the file in, pair it with
+ * segment-slider.css, and call:
+ *
+ *   const s = new SegmentSlider(document.getElementById('goal'), {
+ *     segments: ['Consistently missing', 'Occasionally met', 'Usually met',
+ *                'Consistently met', 'Exceeded'],
+ *     readout: 'label',
+ *     ends: true,
+ *     onChange: (i) => console.log(i),
+ *   });
+ *
+ * WHY THIS EXISTS, and what a plain styled range does not give you
+ * ----------------------------------------------------------------
+ * 1. A range always holds a value. On an ordered scale where the first state is
+ *    a real answer, a slider parked at the minimum is indistinguishable from a
+ *    slider nobody has touched - so it answers the first state on the user's
+ *    behalf. Here the value lives in this object (`null` until the user acts)
+ *    and the range underneath is only ever a control surface.
+ *
+ * 2. A range's stops are not its segments. Native stops sit at the ends and at
+ *    the boundaries of the run, so the nearest stop to a press is not the
+ *    segment that was pressed. The pointer handler below reads the segment the
+ *    pointer is over, geometrically, instead.
+ *
+ * 3. Consequence of 1 + 2: a press on the first segment of an untouched slider
+ *    would set the range to the value it already holds, fire no `input` event,
+ *    and leave the control reading unanswered with the user's finger on the
+ *    answer they just gave. Same for the Home key, and for either arrow key.
+ *    All three are handled explicitly.
+ *
+ * Extracted from the SMOMA readiness tool, where it is the Goal Rating (five
+ * states) and the Maturity Level (six levels, x8 capabilities).
+ */
+
+(function (root) {
+  'use strict';
+
+  // Every key a native range answers, against the step it means on a scale of
+  // whole states. `null` is an absolute position rather than a step: Home and
+  // End go to the ends. PageUp/PageDown move by a tenth of the run on a native
+  // range, which on a scale of five or six states is one of them.
+  const KEYS = {
+    ArrowUp: 1, ArrowRight: 1, PageUp: 1,
+    ArrowDown: -1, ArrowLeft: -1, PageDown: -1,
+    Home: null, End: null,
+  };
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+
+  // Blank-line-separated text as paragraphs, so a multi-paragraph description
+  // arrives as prose rather than as one run-on block.
+  const paras = (text, cls) => String(text).split(/\n{2,}/)
+    .map((p) => `<p${cls ? ` class="${cls}"` : ''}>${esc(p)}</p>`).join('');
+
+  class SegmentSlider {
+    /**
+     * @param {HTMLElement} host      element to build the control inside
+     * @param {object} opts
+     *   segments      {string[]}  required. One label per segment, in order.
+     *   value         {?number}   initial index, or null for unanswered.
+     *   readout       {'label'|'badge'|'none'}  how the answer is stated.
+     *   unsetLabel    {string}    stands in for the answer while unanswered.
+     *                             Must not be the name of the first segment.
+     *   ticks         {boolean|string[]}  tick labels under the run.
+     *   ends          {boolean}   name the first and last segment under the run.
+     *   stepper       {boolean}   -/+ buttons.
+     *   descriptions  {string[]}  one per segment, shown in a live panel.
+     *   unsetDescription {string} what the panel says while unanswered.
+     *   ofLabel       {string}    e.g. 'of 5', beside the badge numeral.
+     *   numerals      {number[]}  what the badge/ticks show per segment
+     *                             (default 0..n-1; pass [1,2,3,4,5] to 1-index).
+     *   ariaLabel     {string}    the control's accessible name.
+     *   onChange      {function}  (index) => void. Fires on every change,
+     *                             including levels a drag passes through.
+     *   onSettle      {function}  (index) => void. Fires when the pointer comes
+     *                             off the run - i.e. the user has arrived at an
+     *                             answer rather than passed through one.
+     *   onDragStart   {function}  () => void. Use it to freeze anything that
+     *                             would otherwise reflow under the finger.
+     */
+    constructor(host, opts) {
+      if (!host) throw new Error('SegmentSlider: no host element');
+      if (!opts || !Array.isArray(opts.segments) || opts.segments.length < 2)
+        throw new Error('SegmentSlider: needs at least two segments');
+
+      this.host = host;
+      this.o = Object.assign({
+        value: null,
+        readout: 'label',
+        unsetLabel: 'Not answered yet',
+        ticks: false,
+        ends: false,
+        stepper: false,
+        descriptions: null,
+        unsetDescription: 'Move the slider to choose.',
+        ofLabel: '',
+        numerals: null,
+        ariaLabel: 'Rating',
+        onChange: null,
+        onSettle: null,
+        onDragStart: null,
+      }, opts);
+
+      this.count = this.o.segments.length;
+      this.numerals = this.o.numerals
+        || Array.from({ length: this.count }, (_, i) => i);
+      this._value = this.o.value === undefined ? null : this.o.value;
+      this._dragging = false;
+
+      this._build();
+      this._wire();
+      this.paint();
+    }
+
+    get value() { return this._value; }
+    get isSet() { return this._value !== null; }
+
+    /** Set the answer by segment index. Out-of-range is clamped, not rejected:
+     *  a pointer under capture travels past both ends of the run. */
+    set(index) {
+      const at = Math.max(0, Math.min(this.count - 1, index));
+      if (this._value === at) return;
+      this._value = at;
+      this.paint();
+      if (this.o.onChange) this.o.onChange(at);
+    }
+
+    /** Back to unanswered. */
+    clear() {
+      if (this._value === null) return;
+      this._value = null;
+      this.paint();
+      if (this.o.onChange) this.o.onChange(null);
+    }
+
+    /** Step by whole states. From unanswered, either direction answers with the
+     *  first state: there is nothing below the bottom of the scale to step down
+     *  to, and refusing the press would leave the user pressing a dead control. */
+    nudge(step) {
+      this.set(this._value === null ? 0 : this._value + step);
+    }
+
+    destroy() {
+      this.host.innerHTML = '';
+      this.el = this.input = null;
+    }
+
+    // ---- markup ------------------------------------------------------------
+
+    // Which state the description panel is showing, so the same one is never
+    // rewritten. The panel is filled in the markup rather than by the first
+    // paint: a live region filled a moment after it appears announces itself on
+    // arrival - which, on a page of eight of these, means eight announcements.
+    _readKey() { return this.isSet ? String(this._value) : ''; }
+
+    _readHTML() {
+      return this.isSet
+        ? paras(this.o.descriptions[this._value])
+        : `<p class="sseg-prompt">${esc(this.o.unsetDescription)}</p>`;
+    }
+
+    _build() {
+      const o = this.o;
+      const segs = o.segments
+        .map(() => '<i class="sseg-seg" data-passed="false" data-on="false"></i>')
+        .join('');
+
+      const tickLabels = o.ticks === true
+        ? this.numerals.map(String)
+        : (Array.isArray(o.ticks) ? o.ticks : null);
+
+      const badge = o.readout === 'badge' || o.stepper ? `
+        <div class="sseg-top">
+          ${o.readout === 'badge' ? `<p class="sseg-badge">
+            <span class="sseg-num" data-part="num"></span>
+            ${o.ofLabel ? `<span class="sseg-of">${esc(o.ofLabel)}</span>` : ''}
+            <span class="sseg-name" data-part="name"></span>
+          </p>` : '<span></span>'}
+          ${o.stepper ? `<p class="sseg-step">
+            <button type="button" class="sseg-btn" data-step="-1"
+                    aria-label="Down one step: ${esc(o.ariaLabel)}">&minus;</button>
+            <button type="button" class="sseg-btn" data-step="1"
+                    aria-label="Up one step: ${esc(o.ariaLabel)}">+</button>
+          </p>` : ''}
+        </div>` : '';
+
+      this.host.innerHTML = `
+        <div class="sseg" data-set="false" style="--sseg-count:${this.count}">
+          ${badge}
+          ${o.readout === 'label'
+            ? '<p class="sseg-said" data-part="said"></p>' : ''}
+          <div class="sseg-wrap">
+            <input type="range" class="sseg-input" data-part="input"
+                   min="0" max="${this.count - 1}" step="1" value="0"
+                   aria-label="${esc(o.ariaLabel)}">
+            <div class="sseg-segs" data-part="segs" aria-hidden="true">${segs}</div>
+          </div>
+          ${tickLabels ? `<p class="sseg-ticks" data-part="ticks" aria-hidden="true">${
+            tickLabels.map((t) => `<span class="sseg-tick">${esc(t)}</span>`).join('')
+          }</p>` : ''}
+          ${o.ends ? `<p class="sseg-ends" aria-hidden="true">
+            <span>${esc(o.segments[0])}</span>
+            <span>${esc(o.segments[this.count - 1])}</span>
+          </p>` : ''}
+          ${o.descriptions ? `<div class="sseg-read" data-part="read"
+                 aria-live="polite" data-at="${this._readKey()}"
+                 >${this._readHTML()}</div>` : ''}
+        </div>`;
+
+      const part = (name) => this.host.querySelector(`[data-part="${name}"]`);
+      this.el = this.host.querySelector('.sseg');
+      this.input = part('input');
+      this.parts = {
+        said: part('said'), num: part('num'), name: part('name'),
+        segs: part('segs'), ticks: part('ticks'), read: part('read'),
+      };
+    }
+
+    // ---- paint -------------------------------------------------------------
+
+    paint() {
+      const set = this.isSet;
+      const at = this._value;
+      const label = set ? this.o.segments[at] : this.o.unsetLabel;
+
+      this.el.dataset.set = set ? 'true' : 'false';
+      if (this.parts.said) this.parts.said.textContent = label;
+      if (this.parts.num)
+        this.parts.num.innerHTML = set
+          ? esc(String(this.numerals[at])) : '<i class="sseg-empty"></i>';
+      if (this.parts.name) this.parts.name.textContent = label;
+
+      // The range has to sit somewhere even with nothing chosen, and the bottom
+      // of the scale is the only place it can rest. Nothing reads this value.
+      this.input.value = String(set ? at : 0);
+      // A range reads its own number out, which here would be a position on a
+      // scale whose answer is a state - and would read "0" for a slider nobody
+      // has touched.
+      this.input.setAttribute('aria-valuetext', label);
+
+      Array.from(this.parts.segs.children).forEach((seg, i) => {
+        seg.dataset.passed = set && i < at ? 'true' : 'false';
+        seg.dataset.on = set && i === at ? 'true' : 'false';
+      });
+      if (this.parts.ticks)
+        Array.from(this.parts.ticks.children).forEach((tick, i) => {
+          tick.dataset.on = set && i === at ? 'true' : 'false';
+        });
+
+      for (const button of this.el.querySelectorAll('.sseg-btn')) {
+        const dir = +button.dataset.step;
+        // Unanswered, both ends are live: either one is the first answer.
+        button.disabled = set && (dir < 0 ? at === 0 : at === this.count - 1);
+      }
+
+      // The panel is a live region, so the same state is never rewritten:
+      // re-announcing the paragraph someone is already reading, every time the
+      // handle moves inside one segment, talks over them.
+      const read = this.parts.read;
+      if (read && read.dataset.at !== this._readKey()) {
+        read.dataset.at = this._readKey();
+        read.innerHTML = this._readHTML();
+      }
+    }
+
+    // ---- input -------------------------------------------------------------
+
+    _wire() {
+      const input = this.input;
+
+      // Keyboard. Every key a range answers is taken, not just the arrows: Home
+      // on an unanswered slider means the first state, which is exactly the
+      // press the range would swallow because it already holds that value.
+      input.addEventListener('keydown', (e) => {
+        if (!(e.key in KEYS)) return;
+        e.preventDefault();
+        const step = KEYS[e.key];
+        if (step === null) this.set(e.key === 'Home' ? 0 : this.count - 1);
+        else this.nudge(step);
+      });
+
+      // The stepper. Deliberately does not settle: it is a press repeated to
+      // climb the scale, so anything that closes or advances on settle would
+      // make it unusable. Same for the arrow keys above.
+      if (this.o.stepper)
+        this.el.addEventListener('click', (e) => {
+          const button = e.target.closest('.sseg-btn');
+          if (button) this.nudge(+button.dataset.step);
+        });
+
+      // Fallback for anything without PointerEvent: let the native range drive
+      // itself. Programmatic value changes do not fire `input`, so this cannot
+      // double up with the pointer path below.
+      input.addEventListener('input', () => this.set(+input.value));
+
+      if (typeof PointerEvent !== 'function') return;
+      this._wirePointer();
+    }
+
+    _wirePointer() {
+      const input = this.input;
+
+      // Where the pointer is along the run, or nothing where nothing has been
+      // laid out and every box measures zero - answering from a measurement of
+      // nothing would put the handle at the first segment.
+      const at = (e) => {
+        const box = input.getBoundingClientRect();
+        if (!box.width) return null;
+        return Math.floor((e.clientX - box.left) / box.width * this.count);
+      };
+
+      const drag = (e) => {
+        if (!this._dragging) return;
+        const found = at(e);
+        if (found === null) return;
+        // This is what stops the native range moving itself, which would
+        // otherwise fight the geometric read above.
+        e.preventDefault();
+        this.set(found);
+      };
+
+      input.addEventListener('pointerdown', (e) => {
+        this._dragging = true;
+        this.el.dataset.dragging = 'true';
+        // Taking the press means taking the focus with it. Preventing the
+        // default in `drag` also cancels the compatibility mouse event that
+        // would have focused the control - which would leave someone who
+        // pressed the run unable to fine-tune it with the arrow keys.
+        input.focus({ preventScroll: true });
+        if (this.o.onDragStart) this.o.onDragStart();
+        // The press itself, before capture is asked for. Capture only decides
+        // where the rest of the gesture is delivered, and a browser can refuse
+        // it outright - it throws when it no longer considers the pointer
+        // active - so asking first would let a refusal swallow the answer that
+        // was just given.
+        drag(e);
+        try {
+          if (input.setPointerCapture) input.setPointerCapture(e.pointerId);
+        } catch (refused) { /* the gesture still works, over the run itself */ }
+      });
+
+      input.addEventListener('pointermove', drag);
+
+      for (const type of ['pointerup', 'pointercancel'])
+        input.addEventListener(type, () => {
+          if (!this._dragging) return;
+          this._dragging = false;
+          this.el.dataset.dragging = 'false';
+          if (this.isSet && this.o.onSettle) this.o.onSettle(this._value);
+        });
+    }
+  }
+
+  if (typeof module === 'object' && module.exports) module.exports = SegmentSlider;
+  else root.SegmentSlider = SegmentSlider;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+var CAPS = [{"name": "Document Intake", "question": "How are K-1s primarily received?", "levels": ["No intake process exists. K-1s stay wherever they land, in individual inboxes and on desks, and are retrieved only when someone needs one.", "Email or paper delivery", "Client uploads to shared folder", "Automated collection via client portal", "Direct API or system-to-system feed", "Digital system-to-system transmission"]}, {"name": "Inventory Management", "question": "Do you have a way to track & confirm all expected or received K-1s?", "levels": ["No expected-K-1 list exists. Nothing is tracked, so a missing K-1 surfaces only when a return cannot be completed.", "No formal tracking or checklist", "Manual checklist in spreadsheet", "Centralized tracking tool with manual updates", "Automated dashboard or alerts tied to workflow system", "Comprehensive automated dashboarding across federal, state & international tax"]}, {"name": "Data Extraction", "question": "How is data entered into your system?", "levels": ["No data is extracted. The PDF remains the only record, and figures are read off the document each time they are needed.", "Manual entry", "OCR of federal forms + manual input", "AI extraction of full K-1 package", "Real-time, event-driven data exchange with continuous validation & reconciliation", "Digital system-to-system transmission"]}, {"name": "Data Validation", "question": "How is extracted data validated?", "levels": ["No validation occurs. Figures are accepted as entered, with nothing checked back to the source K-1.", "Manual tick & tie of all data elements based on user knowledge", "Manual tick & tie with use of checklists or templates in shared workspace", "Automated system validation with some manual tick & tie", "Automated system validation with AI-assisted anomaly detection", "Digital system-to-system transmission"]}, {"name": "Data Review", "question": "How is validated data reviewed?", "levels": ["No review occurs. Whatever the preparer produces moves forward without a second set of eyes or a documented sign-off.", "Tick & tie of all data in tax software against source documentation", "Use of review checklists & signoff protocols. More than 1 layer of review within shared workspace", "Aggregated review of data in bulk with focus on reasonableness and outliers", "Aggregated review of data by specialists to surface value-add insights & opportunities", "Automated insights and exceptions. Firmwide dashboards of high-risk and prioritization."]}, {"name": "Tax Analysis & Reporting", "question": "How mature is your approach to tax analysis and reporting?", "levels": ["No analysis occurs. Figures are placed on the return without evaluating or documenting positions, capital accounts, or state and international detail.", "Basic compliance only; limited documentation of tax positions.", "Ad-hoc analysis with minimal support or tracking.", "Documented tax positions and maintained capital accounts; some investment-level analysis.", "Formal tax memos and forward-looking analysis of anticipated sales or impacts.", "Proactive planning and forecasting integrated into tax strategy."]}, {"name": "Integration", "question": "How integrated is your data flow into e-file software?", "levels": ["No data flow exists. Nothing passes between K-1 data and e-file software, and every season is rebuilt from scratch.", "Manual keypunching directly into e-file software.", "Enter data into Excel or workpapers, then import to e-file software.", "Use native integrations from K-1 collection tools.", "Custom APIs connect consolidated workpapers to e-file software.", "Fully automated digital transmission from source data to e-file software."]}, {"name": "Resource Structure", "question": "How structured and scalable is your team model for K-1 validation and review?", "levels": ["No team model exists. K-1 work lands on whoever has capacity that week, with no defined roles, ownership, or handoffs.", "Named staff handle K-1 work each season, but with no standard process and limited ability to leverage lower-cost resources.", "Defined engagement teams with staff handling input and validation, managers reviewing details.", "Staff own full validation; managers review aggregated data for anomalies and trends.", "Centralized or pooled team established for consistency and scale.", "ITAX and SALT specialists analyze aggregated data to identify consulting opportunities."]}, {"name": "Advisory", "question": "How do you use K-1 data as an analytical and advisory asset?", "levels": ["K-1 data is not retained in usable form. Once the return is filed there is nothing left to query, so no insight or advisory conversation is possible.", "K-1 data is used once for filing, then archived; no reuse, reporting, or analytics", "Ad-hoc reporting pulled manually from spreadsheets; no standard metrics or portfolio view", "Standardized dashboards and portfolio-level reporting drawn from platform data", "Internal cross-entity and year-over-year analytics with anomaly detection inform planning and surface advisory opportunities", "K-1 data is operated as a strategic asset; K1xInsights peer-cohort benchmarking and predictive analytics drive advisory services and forward-looking decisions"]}, {"name": "Governance & Trust", "question": "How well do you govern K-1 data, commit to automation, and measure the value it returns?", "levels": ["No controls exist. K-1 data sits in personal email and local drives. Automation has not been raised internally, and the cost of a single K-1 is unknown.", "Data sits in firm systems but controls are informal and IRC 7216 consent is handled ad hoc. Automation has been discussed with no owner. Payoff is assumed, not measured.", "Manual sign-offs and checklists govern the work, access is granted case by case. Vendors are being evaluated without a structured plan. Savings are tracked occasionally against no baseline.", "Documented controls with role-based access, logged changes, and an IRC 7216 consent framework. Pilots run in select teams. A documented baseline tracks cost-per-K-1, cycle time, and exception rate.", "Immutable, timestamped audit trail, segregation of duties enforced at the data level, 7216 controls examination-ready. A funded roadmap scales firm-wide. Realized gains are redeployed and reviewed with leadership.", "Continuous, policy-enforced governance with IRS-defensible audit trail and SOC 2 aligned controls. Automation is embedded with change management. Value compounds, benchmarked against peers and reinvested season over season."]}];
+var LEVEL_NAMES = ['None','Ad-Hoc','Standardized','Automated','Integrated','Autonomous'];
+
+var sliders = new Array(CAPS.length).fill(null);
+var cards = new Array(CAPS.length).fill(null);
+var heads = new Array(CAPS.length).fill(null);
+var scoreEls = new Array(CAPS.length).fill(null);
+var sparkEls = new Array(CAPS.length).fill(null);
+var mounts = new Array(CAPS.length).fill(null);
+var frontier = 0;
+// Trailing-pair accordion (§29, replacing §27's single-open model). Answering
+// the open frontier card never closes that card itself: it opens the next
+// card below it, and closes whichever card was open *before* the one just
+// answered – up to two cards open at once, a sliding window rather than a
+// single slot. Two pieces of state drive it:
+//   frontierOlder – the frontier card that will close the next time the
+//     frontier advances (null at the very start, since card 0 has nothing
+//     before it to close).
+//   reviewCard – set while an earlier, already-answered capability is open
+//     for out-of-sequence review. Reviewing joins the same two-wide window
+//     (it becomes the newest open card, closing frontierOlder from view) but
+//     doesn't touch frontierOlder itself, so closing the review card is just
+//     "stop overriding the display" – the frontier pair reappears without
+//     needing to be separately remembered or reopened.
+// Card 0's data-state="open" set at creation below is what these two null
+// values already describe: only the frontier (0) is open.
+var frontierOlder = null;
+var reviewCard = null;
+var CAPABILITY_KEYS = ['document_intake','inventory_management','data_extraction','data_validation','data_review','tax_analysis_reporting','integration','resource_structure','advisory','governance_trust'];
+var PREFILL_RATINGS = {{ (ratings if ratings else none) | tojson }};
+
+function chevronSvg(){
+  return '<svg viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+function updateScoreLabel(i){
+  var el = scoreEls[i];
+  if (sliders[i].isSet) {
+    el.textContent = LEVEL_NAMES[sliders[i].value].toUpperCase();
+    el.dataset.scored = 'true';
+  } else {
+    el.textContent = 'NOT SCORED';
+    el.dataset.scored = 'false';
+  }
+}
+
+// Collapsed-row sparkline (§21, ported from the Profile parking lot's item 3): a
+// miniature version of the segment bar, filled up to and including the answer.
+// Only visible while collapsed (CSS hides it when open, since the real slider
+// already shows this); not-yet-reached/unscored rows render with every segment
+// unfilled rather than omitting the sparkline, so every collapsed row looks the
+// same shape at a glance.
+function updateSpark(i){
+  var segs = sparkEls[i].children;
+  for (var s = 0; s < segs.length; s++){
+    segs[s].dataset.filled = (sliders[i].isSet && s <= sliders[i].value) ? 'true' : 'false';
+  }
+}
+
+function clearValidationMessage(){
+  var msg = document.getElementById('startValidationMsg');
+  if (msg) msg.textContent = '';
+}
+
+// Card state helper. Keeps a card's data-state and its header's
+// aria-expanded in sync in one place.
+function setCardState(i, state){
+  cards[i].dataset.state = state;
+  heads[i].setAttribute('aria-expanded', state === 'open' ? 'true' : 'false');
+}
+
+// Whether card i should be open right now, purely as a function of
+// (frontier, frontierOlder, reviewCard). While a review card is set, it
+// stands in for frontierOlder in the visible pair – frontierOlder's own
+// value is untouched underneath, so clearing reviewCard snaps the display
+// straight back to the true frontier pair with no separate restore step.
+function isOpen(i){
+  if (reviewCard !== null) return i === frontier || i === reviewCard;
+  return i === frontier || i === frontierOlder;
+}
+
+// Re-derive every card's open/closed state from (frontier, frontierOlder,
+// reviewCard) and paint it. The single source of truth for which card(s) are
+// expanded – everything else (initial build, settle, review toggle) routes
+// through this rather than issuing its own open/close calls, which is what
+// makes "closing a review card restores the frontier pair" free: nothing
+// needs to remember what to reopen, since isOpen() recomputes it fresh.
+function syncOpenStates(){
+  for (var k = 0; k < CAPS.length; k++){
+    setCardState(k, isOpen(k) ? 'open' : 'closed');
+  }
+}
+
+// Click, or Enter/Space, on an answered card's header. Unscored capabilities
+// aren't clickable at all (unchanged from §15/§18), so this only ever runs
+// for one that's been answered.
+function toggleOrReview(i){
+  if (cards[i].dataset.clickable !== 'true') return;
+  if (i === reviewCard){
+    // Closing the review card returns to the frontier pair.
+    reviewCard = null;
+  } else if (!isOpen(i)){
+    // Opening an earlier, closed answer for review joins the two-wide
+    // window as the newest card, pushing frontierOlder out of view (its
+    // value is kept, not cleared – see isOpen()/syncOpenStates() above).
+    reviewCard = i;
+  } else {
+    // Header click on a card that's already open (the active frontier
+    // card, or frontierOlder sitting in its natural slot): nothing to do:
+    // the trailing pair manages its own membership, it isn't manually
+    // collapsed by clicking the card that's already part of it.
+    return;
+  }
+  syncOpenStates();
+}
+
+// Anchor a card's on-screen position across a DOM change that shifts layout
+// above it (§30). Closing frontierOlder removes height above the card the
+// user is actively answering, which otherwise pulls that card - and the
+// segment under the pointer - up the page even though the pointer hasn't
+// moved. Measuring the card's position before and after the change and
+// scrolling by the difference cancels that: it's a rigid-body compensation,
+// not pointer-tracking, so it works the same way for a mouse mid-drag or a
+// keyboard user tabbing away - every point in the card, wherever the
+// pointer happens to be, ends up back where it started.
+function withScrollAnchor(anchorEl, fn){
+  var before = anchorEl.getBoundingClientRect().top;
+  fn();
+  var after = anchorEl.getBoundingClientRect().top;
+  if (after !== before) window.scrollBy(0, after - before);
+}
+
+// The collapse-and-advance trigger (§27, retargeted in §29 at the
+// trailing-pair model). Pointer fires this via onSettle, on release;
+// keyboard fires it via blur/focusout on the slider input, once the user
+// actually tabs away – not on every arrow press, which would collapse the
+// card after the very first nudge and leave no way to keep adjusting before
+// moving on.
+function settleCard(i){
+  if (!sliders[i].isSet) return;
+  if (i === frontier){
+    // §30: only this path both closes a card above (frontierOlder) and
+    // opens one below (the next frontier) in the same instant, so it's the
+    // only one that needs the scroll anchor - reviewing (below) closes the
+    // very card the segment lives on, where "keep it under the pointer"
+    // doesn't apply the same way.
+    withScrollAnchor(cards[i], function(){
+      if (frontier < CAPS.length - 1){
+        // Advance: the just-answered card stays open, becoming the pair's
+        // "older" half; the next card opens as the new frontier. Whatever was
+        // frontierOlder before this – i.e. two steps back – is what falls out
+        // of the window and closes.
+        frontierOlder = frontier;
+        frontier = frontier + 1;
+      } else {
+        // Terminal case: no next card to open, but the trailing-pair rule
+        // still closes the previous question – ends with only the last
+        // capability open, same end state §27 had, reached the new way.
+        frontierOlder = null;
+      }
+      reviewCard = null;
+      syncOpenStates();
+    });
+  } else if (i === reviewCard){
+    // Edited a reviewed answer and moved away from it: settle back to the
+    // frontier pair rather than leaving the review card open indefinitely.
+    reviewCard = null;
+    syncOpenStates();
+  }
+  // else: i is frontierOlder, edited in place while already sitting in the
+  // pair. It's not going anywhere on its own settle – nothing to resync.
+}
+
+function handleChange(i){
+  clearValidationMessage();
+  updateScoreLabel(i);
+  updateSpark(i);
+  var clickable = sliders[i].isSet;
+  cards[i].dataset.clickable = clickable ? 'true' : 'false';
+  // Keyboard accessibility mirrors the existing mouse-click gating: only an
+  // answered capability's header is a real, focusable, Enter/Space-operable
+  // button.
+  if (clickable) {
+    heads[i].setAttribute('tabindex', '0');
+    heads[i].setAttribute('role', 'button');
+  } else {
+    heads[i].removeAttribute('tabindex');
+    heads[i].removeAttribute('role');
+  }
+}
+
+function buildCard(i){
+  var cap = CAPS[i];
+  var container = document.getElementById('cap-list');
+
+  var card = document.createElement('div');
+  card.className = 'goal-card';
+  card.dataset.state = (i === 0) ? 'open' : 'closed';
+  card.dataset.clickable = 'false';
+
+  var head = document.createElement('div');
+  head.className = 'goal-row-head';
+  head.setAttribute('aria-expanded', (i === 0) ? 'true' : 'false');
+
+  var chevron = document.createElement('span');
+  chevron.className = 'gc-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.innerHTML = chevronSvg();
+
+  var nameEl = document.createElement('span');
+  nameEl.className = 'gc-name';
+  nameEl.textContent = cap.name;
+
+  var scoreEl = document.createElement('span');
+  scoreEl.className = 'gc-score';
+  scoreEl.textContent = 'NOT SCORED';
+  scoreEl.dataset.scored = 'false';
+
+  var spark = document.createElement('span');
+  spark.className = 'gc-spark';
+  spark.setAttribute('aria-hidden', 'true');
+  for (var sp = 0; sp < LEVEL_NAMES.length; sp++){
+    var seg = document.createElement('i');
+    seg.dataset.filled = 'false';
+    spark.appendChild(seg);
+  }
+
+  head.appendChild(chevron);
+  head.appendChild(nameEl);
+  head.appendChild(scoreEl);
+  head.appendChild(spark);
+
+  var body = document.createElement('div');
+  body.className = 'goal-body';
+
+  var questionEl = document.createElement('div');
+  questionEl.className = 'gc-question';
+  questionEl.textContent = cap.question;
+  body.appendChild(questionEl);
+
+  var mount = document.createElement('div');
+  mount.className = 'goal-slot';
+  body.appendChild(mount);
+
+  card.appendChild(head);
+  card.appendChild(body);
+  container.appendChild(card);
+
+  // Click, or Enter/Space when the header itself is focused, both route
+  // through the same toggleOrReview logic – see above. Only completed
+  // capabilities are toggleable at all – no jumping ahead into capabilities
+  // not yet reached.
+  head.addEventListener('click', function(){ toggleOrReview(i); });
+  head.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggleOrReview(i);
+  });
+
+  cards[i] = card;
+  heads[i] = head;
+  scoreEls[i] = scoreEl;
+  sparkEls[i] = spark;
+  mounts[i] = mount;
+
+  var prefillValue = (PREFILL_RATINGS && PREFILL_RATINGS[CAPABILITY_KEYS[i]] !== undefined)
+    ? PREFILL_RATINGS[CAPABILITY_KEYS[i]] : null;
+  sliders[i] = new SegmentSlider(mount, {
+    segments: LEVEL_NAMES,
+    value: prefillValue,
+    readout: 'none',
+    unsetLabel: 'NOT SCORED',
+    ticks: LEVEL_NAMES,
+    stepper: false,
+    ends: false,
+    descriptions: cap.levels,
+    unsetDescription: 'Click to select the level that matches your current practice.',
+    ariaLabel: cap.name + ' maturity level',
+    onChange: function(){ handleChange(i); },
+    onSettle: function(){ settleCard(i); },
+  });
+  if (sliders[i].isSet) handleChange(i);
+
+  // Keyboard settle (§27): onSettle above only ever fires on pointer release,
+  // so arrow-key input – which has no equivalent "gesture ended" moment –
+  // uses blur/focusout on the slider's own input as its stand-in. That's what
+  // lets a keyboard user press an arrow key several times before the card
+  // collapses: nothing fires until they actually tab away.
+  sliders[i].input.addEventListener('blur', function(){ settleCard(i); });
+
+  updateSpark(i);
+}
+
+for (var gi = 0; gi < CAPS.length; gi++) buildCard(gi);
+
+if (PREFILL_RATINGS) {
+  var lastAnswered = -1;
+  for (var pi = 0; pi < CAPS.length; pi++) { if (sliders[pi].isSet) lastAnswered = pi; }
+  frontier = Math.min(lastAnswered + 1, CAPS.length - 1);
+  frontierOlder = frontier > 0 ? frontier - 1 : null;
+  syncOpenStates();
+}
+
+document.getElementById('nextBtn').addEventListener('click', function(){
+  var answeredCount = sliders.filter(function(s){ return s && s.isSet; }).length;
+  if (answeredCount < CAPS.length) {
+    document.getElementById('startValidationMsg').textContent = 'Answer all ' + CAPS.length + ' capabilities to continue.';
+    return;
+  }
+  for (var i = 0; i < CAPS.length; i++) {
+    document.getElementById('rating_' + CAPABILITY_KEYS[i]).value = sliders[i].value;
+  }
+  document.getElementById('assessmentForm').submit();
+});
+</script>
+</body>
+</html>

@@ -1,11 +1,25 @@
 """
-routes.py -- skeleton for [PROJECT] blueprint.
-Replace [PROJECT] with project codename throughout.
+routes.py -- K1x PMTC Assessment blueprint.
+
+Flow: Profile -> Assessment -> Results, per the routing plan Ben confirmed
+("routing plan looks good"). Session-based multi-step wizard, following
+PLATFORM.md's pattern: GET / always clears the session; edit views prefill
+from whatever is already in session; session.modified = True is set after
+any in-place mutation of a session dict.
 """
-from flask import (render_template, request, session, redirect, url_for,
-                   jsonify, make_response)
+from flask import render_template, request, session, redirect, url_for, jsonify
 from app.blueprints.pmtc import bp
-from app.blueprints.pmtc.calculator import run_calculation, read_defaults
+from app.blueprints.pmtc.calculator import (
+    run_calculation, GOAL_KEYS, CAPABILITY_KEYS, INDUSTRIES,
+)
+
+
+def _int_or_zero(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
 
 # ---------------------------------------------------------------------------
 # Fresh start
@@ -13,158 +27,104 @@ from app.blueprints.pmtc.calculator import run_calculation, read_defaults
 @bp.route('/', methods=['GET'])
 def index():
     session.clear()
-    return render_template('pmtc/step1_profile.html', step=1)
+    return redirect(url_for('pmtc.profile_page'))
+
 
 # ---------------------------------------------------------------------------
-# Edit profile (mid-flow back navigation -- preserves session)
+# Profile (step 1)
 # ---------------------------------------------------------------------------
+@bp.route('/profile', methods=['GET'])
+def profile_page():
+    return render_template(
+        'pmtc/profile.html',
+        profile=session.get('profile'),
+        goals=session.get('goals'),
+    )
+
+
+# Back-navigation alias used by the assessment/results pages' "Back" links —
+# same view as /profile, prefilled from whatever is already in session.
 @bp.route('/edit_profile', methods=['GET'])
 def edit_profile():
-    profile = session.get('profile', {})
-    return render_template('pmtc/step1_profile.html',
-                           step=1, profile=profile)
+    return profile_page()
 
-# ---------------------------------------------------------------------------
-# Profile submit
-# ---------------------------------------------------------------------------
-@bp.route('/step1_profile', methods=['POST'])
-def step1_profile():
-    revenue_raw = request.form.get('revenue', '0').replace(',', '')
+
+@bp.route('/profile', methods=['POST'])
+def profile_submit():
     profile = {
-        'company':      request.form.get('company_name', ''),
-        'revenue':      float(revenue_raw),
-        'employees':    int(request.form.get('employees', '0').replace(',', '')),
-        'it_headcount': int(request.form.get('it_headcount', '0').replace(',', '')),
+        'company': (request.form.get('company') or 'Company XYZ').strip(),
+        'industry': request.form.get('industry') or INDUSTRIES[0],
     }
+    if profile['industry'] not in INDUSTRIES:
+        profile['industry'] = INDUSTRIES[0]
+
+    goals = {key: _int_or_zero(request.form.get('goal_' + key)) for key in GOAL_KEYS}
+    goals = {key: max(0, min(4, value)) for key, value in goals.items()}
+
     session['profile'] = profile
-    session['assumption_defaults'] = read_defaults()
-    session['step'] = 2
+    session['goals'] = goals
+    # A profile re-submit invalidates any previously computed results — the
+    # user has to re-run the assessment (or their existing ratings carry
+    # forward unchanged, but the derived results are stale either way).
+    session.pop('results', None)
     session.modified = True
-    return redirect(url_for('pmtc.challenges'))
+    return redirect(url_for('pmtc.assessment_page'))
+
 
 # ---------------------------------------------------------------------------
-# Challenges
+# Assessment (step 2)
 # ---------------------------------------------------------------------------
-@bp.route('/challenges', methods=['GET'])
-def challenges():
+@bp.route('/assessment', methods=['GET'])
+def assessment_page():
     if 'profile' not in session:
-        return redirect(url_for('pmtc.index'))
-    return render_template('pmtc/step2_challenges.html',
-                           step=2, profile=session['profile'])
+        return redirect(url_for('pmtc.profile_page'))
+    return render_template('pmtc/assessment.html', ratings=session.get('ratings'))
 
-@bp.route('/step2_challenges', methods=['POST'])
-def step2_challenges():
+
+@bp.route('/assessment', methods=['POST'])
+def assessment_submit():
     if 'profile' not in session:
-        return redirect(url_for('pmtc.index'))
-    priorities = {f'ch{i}': request.form.get(f'ch{i}', 'None') for i in range(1, 8)}
-    session['priorities'] = priorities
-    kpis = run_calculation(session['profile'], priorities,
-                           assumptions=session.get('assumptions'))
-    session['kpis'] = kpis
-    session['step'] = 3
+        return redirect(url_for('pmtc.profile_page'))
+
+    ratings = {key: _int_or_zero(request.form.get('rating_' + key)) for key in CAPABILITY_KEYS}
+    ratings = {key: max(0, min(5, value)) for key, value in ratings.items()}
+    session['ratings'] = ratings
+
+    profile = session['profile']
+    goals = session.get('goals', {key: 0 for key in GOAL_KEYS})
+    session['results'] = run_calculation(profile['company'], profile['industry'], goals, ratings)
     session.modified = True
-    return redirect(url_for('pmtc.summary'))
+    return redirect(url_for('pmtc.results_page'))
+
 
 # ---------------------------------------------------------------------------
-# Summary
+# Results (step 3)
 # ---------------------------------------------------------------------------
-@bp.route('/summary', methods=['GET'])
-def summary():
-    if 'kpis' not in session:
-        return redirect(url_for('pmtc.index'))
-    investment_defaults = session.get('investment_defaults', {})
-    investment = session.get('investment', investment_defaults)
-    return render_template('pmtc/summary.html',
-                           step=3,
-                           profile=session['profile'],
-                           kpis=session['kpis'],
-                           priorities=session['priorities'],
-                           investment=investment,
-                           investment_defaults=investment_defaults,
-                           assumption_defaults=session.get('assumption_defaults', {}))
+@bp.route('/results', methods=['GET'])
+def results_page():
+    if 'results' not in session:
+        return redirect(url_for('pmtc.profile_page'))
+    return render_template('pmtc/results.html', results=session['results'])
+
 
 # ---------------------------------------------------------------------------
-# Assumptions (modal)
+# Lead capture (the Results page's "Get My Report" modal)
 # ---------------------------------------------------------------------------
-@bp.route('/assumptions', methods=['GET', 'POST'])
-def assumptions():
-    if 'profile' not in session:
-        return redirect(url_for('pmtc.index'))
-    defaults = session.get('assumption_defaults', {})
-    if request.method == 'POST':
-        overrides = {k: v for k, v in request.form.items() if k != 'csrf_token'}
-        session['assumptions'] = overrides
-        kpis = run_calculation(session['profile'], session.get('priorities', {}),
-                               assumptions=overrides)
-        session['kpis'] = kpis
-        session['capture_done'] = False
-        session.modified = True
-        return redirect(url_for('pmtc.summary'))
-    return render_template('pmtc/assumptions.html',
-                           step=3,
-                           defaults=defaults,
-                           assumptions=session.get('assumptions', {}))
-
-# ---------------------------------------------------------------------------
-# Calculators
-# ---------------------------------------------------------------------------
-@bp.route('/calculators', methods=['GET'])
-def calculators():
-    if 'kpis' not in session:
-        return redirect(url_for('pmtc.index'))
-    return render_template('pmtc/calculators.html',
-                           step=4,
-                           kpis=session['kpis'],
-                           priorities=session.get('priorities', {}))
-
-# ---------------------------------------------------------------------------
-# Download report
-# ---------------------------------------------------------------------------
-@bp.route('/download', methods=['GET'])
-def download():
-    if 'kpis' not in session:
-        return redirect(url_for('pmtc.index'))
-    from app.blueprints.pmtc.report import generate_report
-    investment = session.get('investment') or session.get('investment_defaults', {})
-    pptx_bytes = generate_report(
-        session['kpis'], session['profile'],
-        session.get('priorities', {}), investment
-    )
-    response = make_response(pptx_bytes)
-    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-    company = session['profile'].get('company', 'Report').replace(' ', '_')
-    response.headers['Content-Disposition'] = f'attachment; filename="{company}_Report.pptx"'
-    return response
-
-# ---------------------------------------------------------------------------
-# Send report email
-# ---------------------------------------------------------------------------
-@bp.route('/send_report', methods=['POST'])
-def send_report():
-    if 'kpis' not in session:
-        return jsonify({'error': 'No data'}), 400
-    email = request.form.get('email', '').strip()
-    if not email:
-        return jsonify({'error': 'Email required'}), 400
-    from app.blueprints.pmtc.emailer import send_report_email
-    investment = session.get('investment') or session.get('investment_defaults', {})
-    send_report_email(email, session['profile'], session['kpis'],
-                      session.get('priorities', {}), investment)
-    # Data capture email backfill
-    if 'profile' in session:
-        try:
-            from app.blueprints.pmtc.data_capture import update_email
-            update_email(email, session['profile'].get('company', ''))
-        except Exception:
-            pass
-    return jsonify({'status': 'sent'})
-
-# ---------------------------------------------------------------------------
-# Investment recalculation (API)
-# ---------------------------------------------------------------------------
-@bp.route('/api/recalc_investment', methods=['POST'])
-def recalc_investment():
-    data = request.get_json(force=True) or {}
-    session['investment'] = data
+# Best-effort stub: accepts the submission and returns success so the modal
+# always shows its confirmation state, but does not yet persist the lead
+# anywhere. The data-capture method (Google Sheets vs. something else) and
+# the report-email delivery method are both unconfirmed defaults in
+# PROJECT_STATE.md (Q2/Q3) -- wire this up to app/blueprints/pmtc/data_capture.py
+# and emailer.py once Ben confirms those.
+@bp.route('/api/lead', methods=['POST'])
+def lead_capture():
+    data = request.get_json(silent=True) or {}
+    session['lead'] = {
+        'first_name': data.get('first_name', ''),
+        'last_name': data.get('last_name', ''),
+        'company': data.get('company', ''),
+        'email': data.get('email', ''),
+        'opt_in': bool(data.get('opt_in')),
+    }
     session.modified = True
-    return jsonify({'status': 'ok'})
+    return jsonify({'status': 'received'})

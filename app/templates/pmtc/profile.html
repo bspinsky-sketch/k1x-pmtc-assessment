@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K1x Capability Maturity Assessment – Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1E1E1E; --ink-deepest:#0A0A0A; --ink-soft:#3A3A36; --signal:#DFDA7A; --signal-ink:#5A5726;
+  --blue:#11B5E0; --green:#00D89F;
+  --paper:#FFFFFF; --bone:#DFE5E6; --rule:#E4E4DF; --slate:#6E6E68; --slate-light:#C4CBCC;
+  --font-display:'Outfit',Helvetica,Arial,sans-serif;
+  --font-ui:'Outfit',Helvetica,Arial,sans-serif;
+  --font-mono:'Outfit',Helvetica,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-ui);background:var(--bone);color:var(--ink);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+.shell{max-width:960px;margin:0 auto;padding:48px 24px 96px;}
+a{color:inherit;}
+
+/* breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:24px 0 8px;}
+.bc-step{font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-light);}
+.bc-step.current{background:var(--signal);color:var(--ink);padding:3px 8px;font-weight:700;}
+.bc-link{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px;}
+.bc-link:hover{text-decoration-color:var(--ink);}
+.bc-sep{color:var(--rule);font-size:11px;}
+
+/* header */
+.page-header{padding:24px 0 40px;}
+.eyebrow{font-family:var(--font-mono);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--slate);margin-bottom:12px;}
+.h1{font-family:var(--font-display);font-size:34px;line-height:1.05;letter-spacing:-.02em;margin-bottom:14px;}
+
+/* dark hero band behind breadcrumb+header, holding a horizontal slice of Picture1.png with a
+   scrim for legible reversed text — see DESIGN_DECISIONS.md §35. */
+.hero-band{position:relative;background:#0A0A0A;overflow:hidden;}
+.hero-band .bg-photo{position:absolute;inset:0;background-image:url({{ url_for('static', filename='pmtc/picture1.png') }});background-size:cover;background-position:center;}
+.hero-band .bg-scrim{position:absolute;inset:0;background:linear-gradient(100deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.4) 45%,rgba(0,0,0,.18) 100%);}
+.hero-inner{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px;}
+.hero-band .bc-step{color:rgba(255,255,255,.55);}
+.hero-band .bc-step.current{background:var(--signal);color:var(--ink);}
+.hero-band .bc-link{color:#fff;text-decoration-color:rgba(255,255,255,.4);}
+.hero-band .bc-link:hover{text-decoration-color:#fff;}
+.hero-band .bc-sep{color:rgba(255,255,255,.35);}
+.hero-band .h1{color:#fff;}
+.hero-band .lede{color:rgba(255,255,255,.82);}
+.lede{font-size:18px;color:var(--ink-soft);}
+
+/* section */
+.section{margin-bottom:44px;}
+.section-label{font-family:var(--font-mono);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);padding-bottom:10px;border-bottom:2px solid var(--ink);margin-bottom:24px;}
+
+/* org fields */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.field-row{display:flex;flex-direction:column;gap:7px;}
+.field-label{font-family:var(--font-mono);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);}
+.field-input{width:100%;padding:14px 24px;font-family:var(--font-ui);font-size:15.5px;border:none;background:var(--paper);color:var(--ink);border-radius:999px;outline:none;}
+.field-input:focus{outline:2px solid var(--ink);outline-offset:2px;}
+select.field-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231E1E1E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:36px;cursor:pointer;}
+
+/* goal group header – plain always-visible, no accordion (§15) */
+.goal-group{margin-bottom:8px;}
+.goal-group-label{font-weight:800;font-size:19px;letter-spacing:-.01em;margin:0;display:flex;align-items:center;gap:10px;padding:14px 0;}
+.icon-badge{width:34px;height:34px;border-radius:50%;background:var(--signal);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.icon-badge img{width:20px;height:20px;display:block;}
+
+/* goal cards – single-open accordion with collapse-on-answer (§17 item 4, built and
+   client-approved in the altprofile.html preview – see DESIGN_DECISIONS.md §24 – then
+   promoted into this live page in §25). This REPLACES §16's "stay open, multiple open
+   allowed" model. */
+.goal-card{border-bottom:1px solid var(--rule);}
+.goal-row-head{display:flex;align-items:center;gap:10px;padding:16px 0;}
+.goal-card[data-clickable="true"] .goal-row-head{cursor:pointer;}
+.goal-row-head:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+.gc-chevron{visibility:hidden;display:inline-flex;width:11px;height:11px;flex-shrink:0;color:var(--ink);transition:transform .18s ease;}
+.gc-chevron svg{width:100%;height:100%;}
+.goal-card[data-clickable="true"] .gc-chevron{visibility:visible;}
+.goal-card[data-state="open"] .gc-chevron{transform:rotate(90deg);}
+.gc-name{font-weight:700;font-size:15.5px;flex:1;transition:font-size .15s,font-weight .15s;}
+.goal-card[data-state="open"] .gc-name{font-weight:800;font-size:22px;
+  /* Open state no longer stretches to fill the row (§24) – the info-toggle icon needs
+     to sit immediately after the visible text, not pushed to the row's far edge. */
+  flex:0 1 auto;}
+/* Info-toggle icon: the "i-Note" pattern Ben supplied – yellow circle/black "i" while
+   the description is hidden, black circle/white "i" while shown (color already tracks
+   aria-expanded, i.e. "is the description currently shown" – §26 only changed which
+   state a freshly-opened card *starts* in, not this mapping). Sits right after the
+   goal name, only while the card is open; hidden the rest of the time so it never
+   competes with the collapsed row's score/sparkline. Real <button>, so Tab + Enter/
+   Space work with no extra JS – see §24. */
+.gc-info-toggle{display:none;width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  border:none;cursor:pointer;padding:0;line-height:1;
+  font-family:var(--font-ui);font-weight:800;font-size:13px;
+  align-items:center;justify-content:center;
+  background:var(--signal);color:var(--ink);}
+.goal-card[data-state="open"] .gc-info-toggle{display:inline-flex;}
+.gc-info-toggle[aria-expanded="true"]{background:var(--ink);color:var(--paper);}
+.gc-info-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+/* Description reveal (§17 item 2, folded into the info-toggle per discussion; default
+   flipped to SHOW and widened to the full interface width in §26 – see
+   DESIGN_DECISIONS.md). Sits directly under the goal name (before the slider), ~30%
+   larger than the component's own default description size – matches the flat 18px
+   Assessment settled on in §20, for type-scale consistency across the project. No
+   max-width: it now runs the full width of the card/interface rather than being
+   capped, per §26. */
+.gc-desc-reveal{display:block;font-size:18px;color:var(--ink);line-height:1.5;margin:-4px 0 16px;}
+.goal-card[data-desc-open="false"] .gc-desc-reveal{display:none;}
+.gc-score{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);flex-shrink:0;}
+.gc-score[data-scored="true"]{color:var(--ink);}
+.goal-card[data-state="open"] .gc-score{display:none;}
+/* Collapsed-row sparkline (§17 item 3, un-parked for Profile too per §22 — originally
+   built for Assessment only in §21). Same visual grammar as the real slider at a
+   fraction of the scale: filled segments up to and including the answer, light gray
+   beyond it, no labels/ticks. Only shown collapsed – the full slider already does this
+   job when open. Not-yet-reached/unscored rows show every segment unfilled rather than
+   hiding the sparkline outright, so every collapsed row reads the same way at a glance. */
+.gc-spark{display:flex;gap:2px;width:64px;height:7px;flex-shrink:0;}
+.goal-card[data-state="open"] .gc-spark{display:none;}
+.gc-spark i{flex:1;background:var(--slate-light);border-radius:1px;}
+.gc-spark i[data-filled="true"]{background:var(--ink);}
+.goal-body{display:none;padding-bottom:22px;}
+.goal-card[data-state="open"] .goal-body{display:block;}
+.goal-slot{width:100%;}
+
+/* footer nav */
+.page-footer{display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-top:48px;padding-top:24px;border-top:1px solid var(--rule);}
+.footer-actions{display:flex;justify-content:flex-end;align-items:center;gap:16px;width:100%;flex-wrap:wrap;}
+.validation-msg{font-family:var(--font-mono);font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--signal-ink);min-height:1em;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;border-radius:999px;min-height:48px;cursor:pointer;text-decoration:none;transition:background .15s;border:none;}
+.btn-primary{background:var(--ink);color:#fff;padding:15px 26px;}
+.btn-primary:hover{background:var(--ink-soft);}
+.btn-secondary{background:transparent;color:var(--ink);border:2px solid var(--ink);padding:13px 24px;}
+.btn-secondary:hover{background:var(--ink);color:#fff;}
+
+@media (max-width:720px){
+  .field-grid{grid-template-columns:1fr;}
+}
+
+/* ============================================================
+   segment-slider component (vendored, inlined per this project's
+   one-file-per-page convention) – see DESIGN_DECISIONS.md §15.
+   Source: PMTC assessment/segment-slider/segment-slider.css
+   ============================================================ */
+/* segment-slider - a range input painted as discrete segments.
+ *
+ * The control underneath is a real <input type="range">, held transparent. It
+ * carries the drag, the keyboard and the accessibility semantics; every mark you
+ * can see is painted by this stylesheet. That separation is the whole point: it
+ * is what lets a slider nobody has moved look unmoved, rather than parked on the
+ * first state of the scale.
+ *
+ * Everything colour- and size-ish is a custom property, so this drops into an
+ * existing design system by overriding the block below - either globally on
+ * :root or per instance on the .sseg element.
+ */
+
+.sseg {
+  /* the run */
+  --sseg-seg-h: 15px;              /* height of one segment */
+  --sseg-seg-gap: 4px;             /* space between segments */
+  --sseg-empty: #DDE4EA;           /* a segment not yet reached */
+  --sseg-empty-line: #A9B6C2;      /* its underline */
+  --sseg-passed: #123A63;          /* a segment below the answer */
+  --sseg-on: #00A3E0;              /* the answered segment itself */
+  --sseg-passed-line: #0C2340;     /* underline for both of those */
+
+  /* text */
+  --sseg-ink: #0C2340;             /* the answer, stated */
+  --sseg-muted: #5B6B7C;           /* labels, and the answer while unset */
+  --sseg-accent-ink: #00699A;      /* the level name; accent that passes on white */
+  --sseg-focus: #00699A;           /* the focus ring */
+  --sseg-cond: inherit;            /* a condensed face, if the system has one */
+
+  /* the stepper buttons and the description rule */
+  --sseg-field: #C9D4DE;
+  --sseg-surface: #FFFFFF;
+  --sseg-surface-2: #F4F7F9;
+
+  max-width: 620px;
+}
+
+/* ---------- the answer, stated ---------------------------------------------
+   Two forms. `readout: 'label'` states the answer in words on one line, for a
+   scale whose states are sentences. `readout: 'badge'` states it as a numeral
+   with the state's name beside it, for a scale whose states are levels. */
+
+.sseg-said {
+  margin: 0;
+  font-size: clamp(16px, 1.8vw, 18px);
+  font-weight: 500;
+  color: var(--sseg-ink);
+}
+/* Unanswered, the standing-in copy is not the answer, and must not read as one. */
+.sseg[data-set="false"] .sseg-said { color: var(--sseg-muted); }
+
+.sseg-top {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.sseg-badge {
+  margin: 0; display: flex; align-items: baseline; gap: 8px;
+  flex-wrap: wrap; min-width: 0;
+}
+.sseg-num {
+  font-weight: 700; font-size: clamp(30px, 3.6vw, 38px); line-height: 1;
+  color: var(--sseg-ink);
+}
+.sseg[data-set="false"] .sseg-num { color: var(--sseg-empty-line); }
+/* Nothing chosen yet is a thin rule one digit wide, set on the digit's optical
+   centre. An en dash at the numeral's own size and weight paints a slab, which
+   reads as a redaction bar or a loading skeleton rather than an empty slot. */
+.sseg-empty {
+  display: inline-block; width: .6em; height: 2px;
+  background: var(--sseg-empty-line); vertical-align: .34em;
+}
+.sseg-of { font-size: 14px; color: var(--sseg-muted); }
+.sseg-name {
+  font-family: var(--sseg-cond); font-weight: 600;
+  font-size: clamp(12px, 1.4vw, 13px); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--sseg-accent-ink); margin-left: 6px;
+}
+.sseg[data-set="false"] .sseg-name { color: var(--sseg-muted); }
+
+/* ---------- the stepper ----------------------------------------------------
+   For the respondent who would rather not drag anything, and the one on a
+   trackpad. */
+
+.sseg-step { margin: 0; display: flex; gap: 6px; flex: none; }
+.sseg-btn {
+  width: 34px; height: 34px; border: 1px solid var(--sseg-field);
+  background: var(--sseg-surface); color: var(--sseg-ink);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.sseg-btn:hover { border-color: var(--sseg-passed-line); background: var(--sseg-surface-2); }
+.sseg-btn:disabled { color: var(--sseg-field); cursor: default; background: var(--sseg-surface); }
+.sseg-btn:disabled:hover { border-color: var(--sseg-field); }
+
+/* ---------- the run itself -------------------------------------------------
+   A transparent range laid over painted segments. The range is inset past the
+   top and bottom of the paint so the whole band is a hit target, not just the
+   15px of ink. */
+
+.sseg-wrap { position: relative; margin-top: 12px; }
+.sseg-input {
+  position: absolute; inset: -11px 0; width: 100%; height: auto; margin: 0;
+  opacity: 0; cursor: pointer;
+  appearance: none; -webkit-appearance: none; background: none;
+  /* The horizontal gesture belongs to the slider and the vertical one to the
+     page, so a finger that lands on the run can still scroll past it. Without
+     this the browser takes the whole gesture and the drag never fires. */
+  touch-action: pan-y;
+}
+/* The thumb is invisible but still has to be draggable, and on a touch screen
+   that means finger-sized. */
+.sseg-input::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; }
+.sseg-input::-moz-range-thumb { width: 34px; height: 34px; border: 0; }
+
+.sseg-segs {
+  display: grid; gap: var(--sseg-seg-gap);
+  grid-template-columns: repeat(var(--sseg-count), 1fr);
+  /* The paint passes every press through to the range underneath. */
+  pointer-events: none;
+}
+.sseg-seg {
+  height: var(--sseg-seg-h);
+  background: var(--sseg-empty);
+  border-bottom: 2px solid var(--sseg-empty-line);
+}
+.sseg-seg[data-passed="true"] {
+  background: var(--sseg-passed); border-bottom-color: var(--sseg-passed-line);
+}
+.sseg-seg[data-on="true"] {
+  background: var(--sseg-on); border-bottom-color: var(--sseg-passed-line);
+}
+
+/* The ring goes round the whole run rather than round the segment under the
+   handle: unanswered, there is no segment under the handle to ring. */
+.sseg-input:focus-visible ~ .sseg-segs {
+  outline: 2px solid var(--sseg-focus); outline-offset: 3px;
+}
+
+/* ---------- what sits under the run ---------------------------------------- */
+
+/* Tick labels, one per segment, on the segment's own centre. */
+.sseg-ticks {
+  margin: 7px 0 0; display: grid; gap: var(--sseg-seg-gap);
+  grid-template-columns: repeat(var(--sseg-count), 1fr);
+}
+.sseg-tick {
+  font-family: var(--sseg-cond); font-weight: 600; font-size: 12px;
+  letter-spacing: .1em; color: var(--sseg-muted); text-align: center;
+}
+.sseg-tick[data-on="true"] { color: var(--sseg-ink); }
+
+/* The two ends named, for a scale too wordy to tick every stop of. */
+.sseg-ends {
+  margin: 8px 0 0; display: flex; justify-content: space-between; gap: 16px;
+  font-size: 12px; color: var(--sseg-muted);
+}
+
+/* The description of wherever the handle is, and only that one.
+   min-height is load-bearing: it stops the page moving under a reader who is
+   mid-drag. Set it to about the median of your own strings - sizing it to the
+   longest spends most of a phone screen on the short ones. */
+.sseg-read {
+  margin-top: 16px; border-left: 3px solid var(--sseg-on); padding-left: 15px;
+  font-size: clamp(14px, 1.5vw, 15px); min-height: 4.65em;
+}
+.sseg[data-set="false"] .sseg-read { border-left-color: var(--sseg-field); }
+.sseg-read p { margin: 0; line-height: 1.6; text-wrap: pretty; }
+.sseg-read p + p { margin-top: 9px; }
+.sseg-read .sseg-prompt { color: var(--sseg-muted); }
+
+
+/* K1x palette mapped onto the component's styling hooks (§15),
+   plus contrast + full-width + label-size fixes from §16 */
+.sseg{
+  --sseg-on: var(--ink);
+  --sseg-passed: var(--ink-soft);
+  --sseg-passed-line: var(--ink);
+  --sseg-empty: var(--slate-light);
+  --sseg-empty-line: var(--slate);
+  --sseg-ink: var(--ink);
+  --sseg-muted: var(--slate);
+  --sseg-accent-ink: var(--signal-ink);
+  --sseg-focus: var(--ink);
+  --sseg-cond: var(--font-mono);
+  --sseg-field: var(--rule);
+  --sseg-surface: var(--paper);
+  --sseg-surface-2: var(--bone);
+  max-width: none;
+  width: 100%;
+}
+/* said-label: smaller than the goal name (§16), and repositioned per-value by JS
+   to center over the selected segment – position:relative keeps it in flow so
+   nothing else has to reflow when it shifts. */
+.sseg-said{position:relative;display:inline-block;font-size:14px;font-weight:600;}
+/* ticks dimmed relative to the segments themselves – the run is the click target,
+   the labels are just captions (§16). Selected tick darkened to full --ink + bolded
+   (§21) for more contrast against the rest, without lightening the unselected tick –
+   that would revive the low-contrast-against-background issue §16 fixed. */
+.sseg-tick{color:var(--slate);}
+.sseg-tick[data-on="true"]{color:var(--ink);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="hero-band">
+  <div class="bg-photo"></div>
+  <div class="bg-scrim"></div>
+  <div class="hero-inner">
+    <nav class="breadcrumb" aria-label="Progress">
+      <span class="bc-step current">1 · Profile</span>
+      <span class="bc-sep">&rsaquo;</span>
+      <span class="bc-step">2 · Assessment</span>
+      <span class="bc-sep">&rsaquo;</span>
+      <span class="bc-step">3 · Results</span>
+    </nav>
+
+    <header class="page-header">
+      <h1 class="h1">Tell us about your organization.</h1>
+      <p class="lede">We'll use this to benchmark your results against similar firms and to prioritize recommendations against what matters most to you.</p>
+    </header>
+  </div>
+</div>
+<div class="shell">
+<form id="profileForm" method="post" action="{{ url_for('pmtc.profile_page') }}">
+
+  <div class="section">
+    <div class="field-grid">
+      <div class="field-row">
+        <label class="field-label" for="company">Organization's name</label>
+        <input class="field-input" type="text" id="company" name="company" value="{{ profile.company if profile else 'Company XYZ' }}">
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="industry">Industry</label>
+        <select class="field-input" id="industry" name="industry">
+          {% set _industries = ["Accounting", "Family Office / Wealth Management", "Financial Institution", "Fund", "Tax Exempt / Non-Profit"] %}
+          {% for _ind in _industries %}
+          <option{{ ' selected' if profile and profile.industry == _ind else '' }}>{{ _ind }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">What are your goals?</div>
+
+    <div class="goal-group">
+      <div class="goal-group-label">
+        <span class="icon-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTQiIGhlaWdodD0iNTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9Ijc3IiB5PSI2OSIgd2lkdGg9IjU0IiBoZWlnaHQ9IjU0Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXAxIj48cmVjdCB4PSItMC4yNTg2ODgiIHk9Ii0xMjY5OCIgd2lkdGg9IjY4NTcxNCIgaGVpZ2h0PSI3MTExMTEiLz48L2NsaXBQYXRoPjxpbWFnZSB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHhsaW5rOmhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRXNBQUFCTENBTUFBQUFQa0lyWUFBQUFBWE5TUjBJQXJzNGM2UUFBQUFSblFVMUJBQUN4and2OFlRVUFBQUoyVUV4VVJRQUFBQWNIQndrSkNRb0tDZ3NMQ3drSkNRc0xDd2tKQ1FBQUFBZ0lDQW9LQ2dvS0NnZ0lDQUFBQUFrSkNRd01EQUFBQUFvS0Nnb0tDZ29LQ2drSkNRb0tDZ2tKQ1E4UER3b0tDZ2tKQ1FrSkNRc0xDd29LQ2dvS0Nna0pDUXNMQ3hBUUVBQUFBQW9LQ2drSkNRZ0lDQWtKQ1FrSkNRb0tDZ0FBQUF3TURBb0tDZ29LQ2dnSUNBa0pDUW9LQ2dvS0Nna0pDUWtKQ1FrSkNRa0pDUW9LQ2dBQUFBa0pDUXNMQ3dvS0Nnc0xDd0FBQUFzTEN3a0pDUXNMQ3dvS0Nnb0tDZ29LQ2dzTEN3QUFBQWtKQ1FvS0Nnb0tDZ2dJQ0FvS0Nnc0xDd3NMQ3dvS0Nna0pDUTRPRGdvS0Nnb0tDZ2tKQ1EwTkRRc0xDd29LQ2dvS0Nna0pDUXdNREFvS0Nna0pDUWNIQndnSUNBc0xDd29LQ2drSkNRc0xDd3NMQ3dzTEN3c0xDd3NMQ3dzTEN3a0pDUXNMQ3dzTEN3b0tDZ29LQ2dvS0NnWUdCZ3NMQ3dvS0Nna0pDUW9LQ2dBQUFBb0tDaEVSRVFrSkNRb0tDZ0FBQUFvS0Nnb0tDZ3NMQ3dvS0Nna0pDUWtKQ1FvS0NoUVVGQWtKQ1FrSkNRa0pDUXNMQ3dvS0Nna0pDUXNMQ3dvS0Nnc0xDd2dJQ0FvS0NnY0hCd2tKQ1FzTEN3d01EQW9LQ2drSkNRa0pDUXNMQ3drSkNRb0tDZ2dJQ0FvS0Nna0pDUW9LQ2dvS0Nnb0tDZ2tKQ1FvS0NnZ0lDQWtKQ1F3TURBb0tDZ2dJQ0FvS0NnNE9EZ2tKQ1FvS0Nnb0tDZ29LQ2djSEJ3Z0lDQW9LQ2hJU0Vnb0tDZ29LQ2dzTEN3a0pDUWdJQ0FvS0NnQUFBQWtKQ1FvS0Nna0pDUXNMQ3d3TURBb0tDZ29LQ2drSkNRQUFBQWtKQ1FvS0NnME5EUTBORFFvS0Nnb0tDZ2tKQ1FnSUNBb0tDZ3NMQ3drSkNRb0tDZ2tKQ1FzTEN3c0xDd29LQ2dnSUNBb0tDZ29LQ2dvS0Nnb0tDZ3dNREF3TURBb0tDZ29LQ2dvS0NqaW1JdXdBQUFEU2RGSk9Vd0FsYllTT2lubFJCRUg0LzdnQ3dFSUY5bjR4dEdmcEVZSHF2RVl6bjZOZEVBRmw3aUEyaUxBR0svVDZ0KytYM3FMTlVtemlDZWh5WW9zTFNLYVB5c2IralF3ODNOVWYrM2NYNE1NU3lFcS9KbURmb0Rrc3JMTW10UzFPenFhcXAwZDBNT2JCa1JyZHJ5aEQ4ZktyQjU0UDBId0Q5N3RFVUl2cm5RM1lIRG92R2Iyb2hWOGlaQ2VKa0JYSmpITjFPT1BVeFhJMWFKeWtTU0h0S3RzL2dDVmF4K0UwSTBCTER2M1cyUjZiYXdnN2UreGNRZVhFendvMytSUW5hdlZ1bVdQQWNjTlVHR0dZdHBWbVQveEFLZk91TXU0UUp6VUFBQUFKY0VoWmN3QUFDeE1BQUFzVEFRQ2FuQmdBQUFQZlNVUkJWRmhIN2RqNWZ4TkZHTWZ4MVFvVUJqVkFLU0NIQ1VGS2hRSnlDQXFsd1FLdFdLNVdpdHlIeUgwWGxOc3FsNkpBQzNMZm9Cd3FDSWhJdVc5UUVQUS9ZbmJtazgxbU45MXN3dXZsVDMzLzBzeDNubWVhWXpzN3FWR256di9vcFpjelhxbFh2MEVtd3hmUnNKRlFHcjlLOEFKZTAwc0o4VHBCK2dKTldFbzBKVWxmTTFZU0lvc2tmYzFaU1loc2tuUzFhTm1LbGFRM1dwT21wazNiZG04R2pWRDdNTXVnY1FjajlGYkhuUHFkS1BNajkyM1oyTGxMbGw3QkpxOXJOL05IZCtwOHlIeEhOWHJvUVdWeVBlbW9YYS9lbENiVCsxMDZQUFNoTnBtKzFIdnBGYUk0aWZlbzkvUSt4VW4wb3p3cTNEOGpmd0NQb3dxb1Rhb3BEVXBrNEFkbVZqaUlzVEo0aUNyMG8zMFJQVkl4MllkRENhU1BTZ2o5NkVHVEVNT3NOM2s0aVJBai9GNFJ5a2k2aEJoRlloaWhVaUpSUnVMUHgzUUpNWnBFS2ljU1l3ajhLYVJMaUU5SXBQNUVZaXlCUCtQb0VtSThpVFNCU0V3azhHYzBYVUpNSXBHYlI0UklUQ1l4aGFaMEhCVzdSWlZNYlRtT2gxSFRQcVZMWGw3UkRUQXduVVQ2ekxvbnRUYWZiRlowc1JrelpjT3MyWXlVT1hOMWl6SlB2OHBnRG1ObC9nSVZ0cGlvaHd2MWhiTm9zUm8xV2xLaGhxYmNwU3F5TEd2KytSZkxWekRBU3JOdzFXcEdJbU5ObTdWZlZuN0ZTSHl0MWpHdEkvSFMyWHhaNnhtNGJkQXJHVVl4Z1pldytZNXRaT0MyU2E5a0dKV08xNWpJTjJiaEVPdVRkU2lON1c3ZkV0VnU3bVpWK0IxRHArL1ZyRktTVFZhckxicHdLME9uYlhwYWFhQ1NjSlg2WVJlcFZpOXJPeGZVRGhXNi9hQ250WjJsVmJ2NkJZSzdtWXVxMm1Qc25WcXdiMHlscnRyUGNjcmxRS0pONmVBSVprMzdEcTBpaG5VOXVSeWlJbDVzdjg1ei9yS0RUQ1F3YnhFMWNSb3lLeTkvRWkxMCtNaFJKcVJqVzQvLytOTkE4K1NBM1NmMEp4M241Q2xteFRvUzA5N3l1Rk5MdWI3RGJUak5XSm01M1BXdVZUTmwzOGtxZmliVGpnYklmOGtqMFg0bHRweGg0c0JaQWltWERMOFJHOFk1RXUwOGFjeUZTZE1IRkhUSm44SFE5RHZGMmtWU2FST1JGb2srWHk4bktOYitJSlVDUkRoSjdHVUt0ZG9sVWlsSWhEK0p2VnltVnFzSkVqdWZjSTJmdzlBVjJ4bEJPa2RzR010SXRHcFNiOFZ4TzlmU1F1TDRmYVBKSHVJa3JsNHJHMnhkeGVMNkRmTmVzcmtyUTZubzBzMWI5azgrR2Z1ekNHZTF1MjNmTldLWG5EOUJ4K25mWmpzbC90MmgwK1hVV2lyOHE3aExyMU0rQmFtNFI2L1RmZVpUVVVhdjB3UG1VOUNwdGpjL3RRT2FFdjluYVZPVGNJdjJkSU5XdDJsVStIZmMra3ZxOWpEblVmbGYxbGZ6c005dkpYWi9jL0pZb1UrMWo1L29ZZlkvYXBpaXArcitlVDE2ejFkZnppUGRFOXlDZkJsK056SW85cCtMSGMrSy92MlB4K21JKy9LZGFidkQxS25qWWhqUEFXcXcxSVcyT2pDREFBQUFBRWxGVGtTdVFtQ0MiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIGlkPSJpbWcyIj48L2ltYWdlPjxjbGlwUGF0aCBpZD0iY2xpcDMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI2ODU3MTQiIGhlaWdodD0iNjg1NzE0Ii8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTc3IC02OSkiPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMSkiIHRyYW5zZm9ybT0ibWF0cml4KDcuODc1ZS0wNSAwIDAgNy44NzVlLTA1IDc3IDY5KSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAzKSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAwLjAyMzA2NTUgMC4wMTM2NDA5KSI+PHVzZSB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bGluazpocmVmPSIjaW1nMiIgdHJhbnNmb3JtPSJzY2FsZSg5MTQyLjg1IDkxNDIuODUpIj48L3VzZT48L2c+PC9nPjwvZz48L3N2Zz4=" alt="" aria-hidden="true"></span>
+        Evolve Capacity
+      </div>
+      <div id="goals-capacity"></div>
+    </div>
+
+    <div class="goal-group">
+      <div class="goal-group-label">
+        <span class="icon-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTQiIGhlaWdodD0iNTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9Ijc2IiB5PSI3NyIgd2lkdGg9IjU0IiBoZWlnaHQ9IjU0Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXAxIj48cmVjdCB4PSItMTI2OTguMSIgeT0iLTAuMjU4Njg4IiB3aWR0aD0iNzExMTExIiBoZWlnaHQ9IjY4NTcxNCIvPjwvY2xpcFBhdGg+PGltYWdlIHdpZHRoPSI3NSIgaGVpZ2h0PSI3NSIgeGxpbms6aHJlZj0iZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFFc0FBQUJMQ0FNQUFBQVBrSXJZQUFBQUFYTlNSMElBcnM0YzZRQUFBQVJuUVUxQkFBQ3hqd3Y4WVFVQUFBSXhVRXhVUlFBQUFBZ0lDQWtKQ1FvS0Nnb0tDZ3NMQ3cwTkRRQUFBQXNMQ3dvS0Nnb0tDZ29LQ2dnSUNBb0tDZ0FBQUJRVUZBa0pDUWtKQ1FvS0Nna0pDUThQRHcwTkRRb0tDZ2tKQ1FvS0Nnb0tDZ3dNREFBQUFBb0tDZ29LQ2dvS0Nna0pDUWtKQ1FBQUFBNE9EZ3NMQ3dvS0Nnb0tDZ3NMQ3cwTkRRc0xDd2dJQ0FvS0Nnb0tDZ29LQ2dvS0Nna0pDUXNMQ3dvS0Nnc0xDd0FBQUFzTEN3b0tDZ29LQ2drSkNRb0tDZ29LQ2drSkNRa0pDUW9LQ2dvS0Nnb0tDZ2tKQ1FrSkNRQUFBQXNMQ3dvS0Nnb0tDZ29LQ2drSkNRc0xDd0FBQUFrSkNRb0tDZ2tKQ1F3TURBb0tDZ2tKQ1FrSkNRZ0lDQWdJQ0FzTEN3b0tDZ2tKQ1FrSkNRc0xDd2tKQ1FnSUNCQVFFQXNMQ3dvS0Nnd01EQWdJQ0F3TURBY0hCd3NMQ3drSkNRZ0lDQTRPRGhVVkZRb0tDZ2dJQ0FjSEJ3a0pDUXNMQ3dvS0Nna0pDUWtKQ1FvS0Nna0pDUUFBQUFzTEN3a0pDUW9LQ2dzTEN3b0tDZ2tKQ1FvS0Nnb0tDZ2tKQ1FrSkNRb0tDZ2dJQ0F3TURBa0pDUW9LQ2dvS0Nna0pDUW9LQ2drSkNRc0xDd29LQ2dvS0Nnb0tDZ3NMQ3drSkNRb0tDZ29LQ2dvS0Nnb0tDZzBORFF3TURBa0pDUWtKQ1F3TURBa0pDUXNMQ3dzTEN3Y0hCd29LQ2drSkNRa0pDUWtKQ1FvS0Nnb0tDaElTRWdvS0Nnb0tDZ0FBQUFvS0Nnc0xDd29LQ2dnSUNBME5EUW9LQ2drSkNRb0tDZ29LQ2dvS0Nnc0xDd2tKQ1FzTEN3QUFBQW9LQ2drSkNRb0tDZ3NMQ3d3TURBb0tDZ3dNREFrSkNRa0pDUWdJQ0FvS0Nna0pDUVlHQmdrSkNkdzRNSndBQUFDN2RGSk9Vd0Fpak9EOGp5WUJSckw5LzdoTEFnMXMyTnR4RVNpVTh2U1lMQU5QdXY2L1VnUVNkZDdoZVJRd20vYjNvRFJXd3NaYUJoZDk1T2FCR1RpaitQSDZwem9IWHNxQW44NWhDUjJFNmhYaTdJZ2ZJYWY3VkZjdDlGc1FjdHdxdGlrbGtQQzFKUXhvMUNSdVE2MXRoNWVsQ0dEbnlJNS82V3BwSEZFMVBoYUp5WjdvbkR0YitjZDdSYy8xc1dOaUUxaTA3VUtOd0VjanJ0RTM3N212RHRXR0N0MUVrOU1uZzZJYXNMdlpwcVlGaFZqeldTdldQOW5hUVg0YktGazJmUkszQUFBQUNYQklXWE1BQUFzVEFBQUxFd0VBbXB3WUFBQUVDRWxFUVZSWVI2V1krWC9VUkJqR2g4dENSL0JBc1dWbEN5aWdIRlZYRkZxc2lxM1VxaFNvVmRTMlNrR3FDR3hGVkR5aENzcWg0b2szaGFvbzN2ZkZYK2NrK1c0MnMzbmY3TFo4ZjlsOW4rZWQ1N003U1dhU21PcE1tanhsNnBScEYxQ2RCM1hUWjlUYmdQb0xaODVDbXhnWFhYeEpHQlJ4NmV6TDBNZlA1WE91SUtWRVErTmN2SEdSdTNKZW5nU1BwdmtMNktpVmhWZGR6ZGcwaXhZdm9hc1dycmwyS2VOa2xpMWZRV2NWRmpSZng1QXNycitoUUwvT2pTdHZvcnNhTjY5YXpSaVpsdFkxZFByY3dxZFAyNjIzTVM3RjdXdnZvQ2xGKzRxT1pYejF1WE5kSjZPVDNOVjFONzVBdXpIM0xMNlh3bWQ5OXdZU1NtemMxSU1uNHJMY1FibXZTVHpqZWpaTkNqT2d0d0ZkSWN4eTNOOG9OajdRaSsvWUhGMitPcVVzWXg1ODZHRzBKUFdic1UxZjlwbnBLR2NaTTJ0bWYvcXZMaDNBN1VmUVNXWTVIbmwwQzBiTVlPUnNGV2ZVb3lMTG1HMlBiY2VDL0ZDb1AwNlpRU3JMTFpKUDdQQU8vWk9oMmtpVmdaRGwyTEJ6UGI1alZ5anRwc3BBempLbU9Qd1VIWFozS0N5bnlrRExNcWFKRHRzUmxoUCtqd0Y3NkxDTllUbU5LZ005S3o2Y1Q0ZmxYcW9NOUt4bjZMQXJ3L0pacWd6VXJOeFVPdXh6WVQyZktnTTFheDhOMWo0ZjFpOVFaYUJtdlVpRHRkRnU4aEpWQm1yV01BM1dzcy9KcTNrU05ldGxHdXdXaEZlb2RkU3NlSW5aZzdDZldrZk5Pa0NESFVHb3ZsQm9XUnZ4Uzh1RU1hOVM2MmhacitGYlc5b3BPOXNRVkxTc0VYeDdzSWhTdmtBMXRLeEYrUFlRUXVMSWFpaFpjN0d0N1VZeFpqcUtpcEwxT3JhMWI2QzRDYXUycVNsWmg3SHRrWGk2akptQnBpRm5EZUJhZXhRbDRCaWFocHpWald2dG15Z0JiMVU1SzhTc1FyeHZ0QzFFQ2hsRVZSQ3ozc2EwOWpoS1JDK3FncGhWdnZOclJva292b01zSTJXOWkrZHU1eEpITWVBOWRCa3A2MzA4YXllamxCaUtOd0VKSWVzRExIZno5U0ZTekFrY2tYUlc3aU1zYTA4Z2xXbkJFVWxuSlRiQ2o1RVN6TU9TU0dXdC9nVEgyaytSa3JSazNOS2xzajdEY0RkeHdzL0tuTEhLckhYb2poMUlQa1B5ODB0QVJkWkErYzU4VGVvZ1J1ekVUK05uZmY0RnN1TWtXaVdqcDJoSTRXWGxqcU02VG8waXBqaXRUYitYdFF2UmtUK05KakNIbmtxU1djbVpHRU9UR1AyU3Bnb1NXU2VSQXJhci96Q2dUMzdJaXJOeXlWL2UwSWVxMEN0T1dTbHIyMUdFZ0x5L2JBbDAwZWxCMWxmZWc4dlhrWmhCM1JsYWswUlp3OTVybE5hNlVNeWtJRHkyQlZuZmZFc1IwVi85bllLajh5enRaZHBOWWJiL21IZTJZbDNXNkV6dFNxdWF2K01iREVxUC95S0Y3eGxTb3ZLcS8rRkhPbXVnVGp5YU1UL1ZNTzBKZnY2RmNXa2FmcVduWm41TExDd2V2MC9nZFZweFRMb0U4bU9aMTZES0gzOFNVT2F2di9IR1RmRWYvMUkvc3JmbVUwSGczLzNsaC8yZWpuMm9FMlhybWVqa090ajZIOHI1c09SYzExalh1YXJ2RzQzNUg4QUs5RnJ2aVYwVEFBQUFBRWxGVGtTdVFtQ0MiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIGlkPSJpbWcyIj48L2ltYWdlPjxjbGlwUGF0aCBpZD0iY2xpcDMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI2ODU3MTQiIGhlaWdodD0iNjg1NzE0Ii8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTc2IC03NykiPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMSkiIHRyYW5zZm9ybT0ibWF0cml4KDcuODc1ZS0wNSAwIDAgNy44NzVlLTA1IDc2IDc3KSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAzKSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAtMC4wMzI4MzExIDAuMDIzMDY1NSkiPjx1c2Ugd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgeGxpbms6aHJlZj0iI2ltZzIiIHRyYW5zZm9ybT0ic2NhbGUoOTE0Mi44NSA5MTQyLjg1KSI+PC91c2U+PC9nPjwvZz48L2c+PC9zdmc+" alt="" aria-hidden="true"></span>
+        Evolve Confidence
+      </div>
+      <div id="goals-confidence"></div>
+    </div>
+
+    <div class="goal-group">
+      <div class="goal-group-label">
+        <span class="icon-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTQiIGhlaWdodD0iNTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9Ijc2IiB5PSI4MCIgd2lkdGg9IjU0IiBoZWlnaHQ9IjU0Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXAxIj48cmVjdCB4PSItMTI2OTguMSIgeT0iLTAuMDIyMDEzNiIgd2lkdGg9IjcxMTExMSIgaGVpZ2h0PSI2ODU3MTQiLz48L2NsaXBQYXRoPjxpbWFnZSB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHhsaW5rOmhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRXNBQUFCTENBTUFBQUFQa0lyWUFBQUFBWE5TUjBJQXJzNGM2UUFBQUFSblFVMUJBQUN4and2OFlRVUFBQUdxVUV4VVJRQUFBQlFVRkF3TURBa0pDUW9LQ2dnSUNBa0pDUW9LQ2drSkNRb0tDZ29LQ2dvS0Nnb0tDZ29LQ2drSkNRb0tDZ2tKQ1FvS0NnNE9EZ0FBQUFnSUNBa0pDUWtKQ1FvS0Nnb0tDZ2tKQ1FzTEN3c0xDd2tKQ1FvS0Nnb0tDZ2tKQ1E4UER3b0tDZ3NMQ3drSkNRc0xDd2tKQ1FzTEN3a0pDUW9LQ2dBQUFBa0pDUWtKQ1FnSUNBc0xDd2tKQ1FvS0Nna0pDUWtKQ1FvS0Nnb0tDZzBORFFrSkNRa0pDUTBORFFvS0Nnd01EQXNMQ3drSkNRb0tDZ29LQ2dvS0Nnc0xDd0FBQUFrSkNRb0tDZ29LQ2dvS0NnZ0lDQWtKQ1FBQUFBb0tDZ2tKQ1FvS0Nnd01EQWdJQ0FvS0Nnb0tDZ2dJQ0FzTEN3a0pDUW9LQ2dBQUFBd01EQWtKQ1FvS0Nna0pDUUFBQUFvS0Nna0pDUUFBQUFvS0Nnc0xDd29LQ2dzTEN3b0tDZ0FBQUFzTEN3a0pDUWdJQ0FvS0Nna0pDUWtKQ1FZR0Jnb0tDZ29LQ2drSkNRZ0lDQXNMQ3dvS0Nna0pDUW9LQ2dzTEN3b0tDZ0FBQUFvS0NnZ0lDQWtKQ1FzTEN3a0pDUXNMQ3djSEJ4VVZGUW9LQ2drSkNRZ0lDQXNMQ3drSkNRc0xDd2tKQ1FvS0NnZ0lDQWtKQ1FrSkNRQUFBQXdNREFzTEN3a0pDUWNIQndvS0Nnb0tDaTFzUjlnQUFBQ09kRkpPVXdBTlBtMlV0Yy9rOC9yNytQSGgwSmR5U1JJRFA0bk4vUCtITFpEb2hVcS9FY3BJRzZweFhlK1dES0swSUREbTREZndNL2NuNi9JVDJ5dGEyZm03OWtjS3M0Tmo0ajNZQXQySUdVQ1phSklpam5OckJ5dzh4UjRJeHI0R3k0MWtMNnNCd3VkYjVZcTlLTHJIVWo2b2d1NGFYTEVMeVI4MmVPcmFKUXgrMTlRWTdaRTdNYlk1akEwcUxsTWs0OGhPeCt6ZEFBQUFDWEJJV1hNQUFBc1RBQUFMRXdFQW1wd1lBQUFDNDBsRVFWUllSNlhZK1NNVVlSekg4V2NycTdXRVdJc2tTVUs1aTVLMEZDdEhTQ25LV1NwZFNvZlNuZTdqZjI1MjVtM043czQ4ODh6ajlRdnplYjdQeDdJN3N6dUVsc0N1M1h1eWd0bDdRem5oM0x4OVdma0ZoZnRaOGFlb09GSVNMVTBYTGl0aVhWMzVnUXAycHp2SWhLcktRMngwRUs1aVNFbnhZYlk1cTJaTXdaRWE5cmc1eXFDMzJtTnNjVlhIcEpmNkJqWklIR2ZXdzRsOXpNc0VHWlpyYkdKY3FwbHBxWlpXcHVWYUdaZHB5MlhZUXp2ekVpZFBNWnVpb3lMalBBcXh3VjNuYVVadG9uVm5qS2UyNnl5SDZHYUhxNkp6VE5yMG5MZldZcjBFbGx3cmRkZkhvTjBGMWtRczVaRmRKSFhUbjNsMUtSMklzeWhFRjVHcGhOQkZiSkE1dTBzc0d1cnRQNnFYTUdtb1pkaG1oTEVVbzR3bTJDOW1sOGtzWStONTVESVRUQ2Qwa0NWY0lVdVlqSVJJNVdxWU4xd2xNbDBqTkZSTmtYa0pYMmVIRVBsRUNUbjFoRUxjbUNiek5uT1RQZFgyUC8wdFFzTXNrWW9aODVIRjUzbzRObTAvdmZNT0x5UjM0WVdKMGNnQUIraW5TU3d1a1dpN25YeC92RU9pYjV3bUVWZ20wV2RjT1N4M0NmVGRvMG5jN3liUmwzeWpYU0hROTRBbThaQmdCeDVSRldzbTBQZVlLdkdFUU4vcVU2ckcya24wUGFOS3JCSG9hNkJKRkJMb0N6Nm5TcndnMGJiOGtpWWhmRjBmSEt6T1UyVElKdFBVK29xZWhIVkNQYS9icURIRnkzYndtbml6UWN1V3QrWHpLZFNmMlpWT0tsd1ZNT2tsMnVkOXF5SC9GSjgwdUhVK1Myd3c2MkVreHJ6TU80WTlERE11VmNLd0I2VXV6L3NMaTFMWGU0WTlLSFU1ZmFwMG9OUVYrTUMwbkZLWCtLajBXNnAxcVpVcGRpbVZxWGJaeXo3eE5aMXlseGdLbWh1eVAzL1pOTC9KcE40bEp1Y1d2a2ErR1hjRmpleE41Nk1yeWEycmhYVS8zTHFHV1BmRHBVdnBoamlkUzljc3k3NDRkNFhHV1BiRnVTdkNxaitPWFZPVHJQcmoxRFh0NjE5SzJ6SzdvdU42ajhxaGEybVRGZi9TdXBwcUYxblFrTklWK3Y2RFdJdTlhK1Vub2FaZjlCaW56VzhpYllHdzFkVGVwL0ttNzZITXJGcjd3K0dPeE5mLzV2eXI1RUJDaVAvUlZsZEdJY1V4V2dBQUFBQkpSVTVFcmtKZ2dnPT0iIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIGlkPSJpbWcyIj48L2ltYWdlPjxjbGlwUGF0aCBpZD0iY2xpcDMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI2ODU3MTQiIGhlaWdodD0iNjg1NzE0Ii8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTc2IC04MCkiPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMSkiIHRyYW5zZm9ybT0ibWF0cml4KDcuODc1ZS0wNSAwIDAgNy44NzVlLTA1IDc2IDgwKSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAzKSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAtMC4wMzI4MzExIC0wLjA5Mzc1KSI+PHVzZSB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bGluazpocmVmPSIjaW1nMiIgdHJhbnNmb3JtPSJzY2FsZSg5MTQyLjg1IDkxNDIuODUpIj48L3VzZT48L2c+PC9nPjwvZz48L3N2Zz4=" alt="" aria-hidden="true"></span>
+        Evolve Capability
+      </div>
+      <div id="goals-capability"></div>
+    </div>
+  </div>
+
+  <!-- Profile is page 1 (Landing removed, §10) – no Back button. Button stays enabled at all times;
+       validation happens on click, not via disabled state – see §15. -->
+  <div class="page-footer">
+    <div class="footer-actions">
+      <p class="validation-msg" id="startValidationMsg" role="status" aria-live="polite"></p>
+      <button type="button" class="btn btn-primary" id="startBtn">Next &rarr;</button>
+    </div>
+  </div>
+
+  <input type="hidden" id="goal_reduce_time" name="goal_reduce_time">
+  <input type="hidden" id="goal_standardize" name="goal_standardize">
+  <input type="hidden" id="goal_scalable_growth" name="goal_scalable_growth">
+  <input type="hidden" id="goal_accuracy" name="goal_accuracy">
+  <input type="hidden" id="goal_client_experience" name="goal_client_experience">
+  <input type="hidden" id="goal_advisory_services" name="goal_advisory_services">
+
+</form>
+</div>
+
+<script>
+/* segment-slider - a range input painted as discrete segments, which can start
+ * unanswered.
+ *
+ * No dependencies, no build step. Drop the file in, pair it with
+ * segment-slider.css, and call:
+ *
+ *   const s = new SegmentSlider(document.getElementById('goal'), {
+ *     segments: ['Consistently missing', 'Occasionally met', 'Usually met',
+ *                'Consistently met', 'Exceeded'],
+ *     readout: 'label',
+ *     ends: true,
+ *     onChange: (i) => console.log(i),
+ *   });
+ *
+ * WHY THIS EXISTS, and what a plain styled range does not give you
+ * ----------------------------------------------------------------
+ * 1. A range always holds a value. On an ordered scale where the first state is
+ *    a real answer, a slider parked at the minimum is indistinguishable from a
+ *    slider nobody has touched - so it answers the first state on the user's
+ *    behalf. Here the value lives in this object (`null` until the user acts)
+ *    and the range underneath is only ever a control surface.
+ *
+ * 2. A range's stops are not its segments. Native stops sit at the ends and at
+ *    the boundaries of the run, so the nearest stop to a press is not the
+ *    segment that was pressed. The pointer handler below reads the segment the
+ *    pointer is over, geometrically, instead.
+ *
+ * 3. Consequence of 1 + 2: a press on the first segment of an untouched slider
+ *    would set the range to the value it already holds, fire no `input` event,
+ *    and leave the control reading unanswered with the user's finger on the
+ *    answer they just gave. Same for the Home key, and for either arrow key.
+ *    All three are handled explicitly.
+ *
+ * Extracted from the SMOMA readiness tool, where it is the Goal Rating (five
+ * states) and the Maturity Level (six levels, x8 capabilities).
+ */
+
+(function (root) {
+  'use strict';
+
+  // Every key a native range answers, against the step it means on a scale of
+  // whole states. `null` is an absolute position rather than a step: Home and
+  // End go to the ends. PageUp/PageDown move by a tenth of the run on a native
+  // range, which on a scale of five or six states is one of them.
+  const KEYS = {
+    ArrowUp: 1, ArrowRight: 1, PageUp: 1,
+    ArrowDown: -1, ArrowLeft: -1, PageDown: -1,
+    Home: null, End: null,
+  };
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+
+  // Blank-line-separated text as paragraphs, so a multi-paragraph description
+  // arrives as prose rather than as one run-on block.
+  const paras = (text, cls) => String(text).split(/\n{2,}/)
+    .map((p) => `<p${cls ? ` class="${cls}"` : ''}>${esc(p)}</p>`).join('');
+
+  class SegmentSlider {
+    /**
+     * @param {HTMLElement} host      element to build the control inside
+     * @param {object} opts
+     *   segments      {string[]}  required. One label per segment, in order.
+     *   value         {?number}   initial index, or null for unanswered.
+     *   readout       {'label'|'badge'|'none'}  how the answer is stated.
+     *   unsetLabel    {string}    stands in for the answer while unanswered.
+     *                             Must not be the name of the first segment.
+     *   ticks         {boolean|string[]}  tick labels under the run.
+     *   ends          {boolean}   name the first and last segment under the run.
+     *   stepper       {boolean}   -/+ buttons.
+     *   descriptions  {string[]}  one per segment, shown in a live panel.
+     *   unsetDescription {string} what the panel says while unanswered.
+     *   ofLabel       {string}    e.g. 'of 5', beside the badge numeral.
+     *   numerals      {number[]}  what the badge/ticks show per segment
+     *                             (default 0..n-1; pass [1,2,3,4,5] to 1-index).
+     *   ariaLabel     {string}    the control's accessible name.
+     *   onChange      {function}  (index) => void. Fires on every change,
+     *                             including levels a drag passes through.
+     *   onSettle      {function}  (index) => void. Fires when the pointer comes
+     *                             off the run - i.e. the user has arrived at an
+     *                             answer rather than passed through one.
+     *   onDragStart   {function}  () => void. Use it to freeze anything that
+     *                             would otherwise reflow under the finger.
+     */
+    constructor(host, opts) {
+      if (!host) throw new Error('SegmentSlider: no host element');
+      if (!opts || !Array.isArray(opts.segments) || opts.segments.length < 2)
+        throw new Error('SegmentSlider: needs at least two segments');
+
+      this.host = host;
+      this.o = Object.assign({
+        value: null,
+        readout: 'label',
+        unsetLabel: 'Not answered yet',
+        ticks: false,
+        ends: false,
+        stepper: false,
+        descriptions: null,
+        unsetDescription: 'Move the slider to choose.',
+        ofLabel: '',
+        numerals: null,
+        ariaLabel: 'Rating',
+        onChange: null,
+        onSettle: null,
+        onDragStart: null,
+      }, opts);
+
+      this.count = this.o.segments.length;
+      this.numerals = this.o.numerals
+        || Array.from({ length: this.count }, (_, i) => i);
+      this._value = this.o.value === undefined ? null : this.o.value;
+      this._dragging = false;
+
+      this._build();
+      this._wire();
+      this.paint();
+    }
+
+    get value() { return this._value; }
+    get isSet() { return this._value !== null; }
+
+    /** Set the answer by segment index. Out-of-range is clamped, not rejected:
+     *  a pointer under capture travels past both ends of the run. */
+    set(index) {
+      const at = Math.max(0, Math.min(this.count - 1, index));
+      if (this._value === at) return;
+      this._value = at;
+      this.paint();
+      if (this.o.onChange) this.o.onChange(at);
+    }
+
+    /** Back to unanswered. */
+    clear() {
+      if (this._value === null) return;
+      this._value = null;
+      this.paint();
+      if (this.o.onChange) this.o.onChange(null);
+    }
+
+    /** Step by whole states. From unanswered, either direction answers with the
+     *  first state: there is nothing below the bottom of the scale to step down
+     *  to, and refusing the press would leave the user pressing a dead control. */
+    nudge(step) {
+      this.set(this._value === null ? 0 : this._value + step);
+    }
+
+    destroy() {
+      this.host.innerHTML = '';
+      this.el = this.input = null;
+    }
+
+    // ---- markup ------------------------------------------------------------
+
+    // Which state the description panel is showing, so the same one is never
+    // rewritten. The panel is filled in the markup rather than by the first
+    // paint: a live region filled a moment after it appears announces itself on
+    // arrival - which, on a page of eight of these, means eight announcements.
+    _readKey() { return this.isSet ? String(this._value) : ''; }
+
+    _readHTML() {
+      return this.isSet
+        ? paras(this.o.descriptions[this._value])
+        : `<p class="sseg-prompt">${esc(this.o.unsetDescription)}</p>`;
+    }
+
+    _build() {
+      const o = this.o;
+      const segs = o.segments
+        .map(() => '<i class="sseg-seg" data-passed="false" data-on="false"></i>')
+        .join('');
+
+      const tickLabels = o.ticks === true
+        ? this.numerals.map(String)
+        : (Array.isArray(o.ticks) ? o.ticks : null);
+
+      const badge = o.readout === 'badge' || o.stepper ? `
+        <div class="sseg-top">
+          ${o.readout === 'badge' ? `<p class="sseg-badge">
+            <span class="sseg-num" data-part="num"></span>
+            ${o.ofLabel ? `<span class="sseg-of">${esc(o.ofLabel)}</span>` : ''}
+            <span class="sseg-name" data-part="name"></span>
+          </p>` : '<span></span>'}
+          ${o.stepper ? `<p class="sseg-step">
+            <button type="button" class="sseg-btn" data-step="-1"
+                    aria-label="Down one step: ${esc(o.ariaLabel)}">&minus;</button>
+            <button type="button" class="sseg-btn" data-step="1"
+                    aria-label="Up one step: ${esc(o.ariaLabel)}">+</button>
+          </p>` : ''}
+        </div>` : '';
+
+      this.host.innerHTML = `
+        <div class="sseg" data-set="false" style="--sseg-count:${this.count}">
+          ${badge}
+          ${o.readout === 'label'
+            ? '<p class="sseg-said" data-part="said"></p>' : ''}
+          <div class="sseg-wrap">
+            <input type="range" class="sseg-input" data-part="input"
+                   min="0" max="${this.count - 1}" step="1" value="0"
+                   aria-label="${esc(o.ariaLabel)}">
+            <div class="sseg-segs" data-part="segs" aria-hidden="true">${segs}</div>
+          </div>
+          ${tickLabels ? `<p class="sseg-ticks" data-part="ticks" aria-hidden="true">${
+            tickLabels.map((t) => `<span class="sseg-tick">${esc(t)}</span>`).join('')
+          }</p>` : ''}
+          ${o.ends ? `<p class="sseg-ends" aria-hidden="true">
+            <span>${esc(o.segments[0])}</span>
+            <span>${esc(o.segments[this.count - 1])}</span>
+          </p>` : ''}
+          ${o.descriptions ? `<div class="sseg-read" data-part="read"
+                 aria-live="polite" data-at="${this._readKey()}"
+                 >${this._readHTML()}</div>` : ''}
+        </div>`;
+
+      const part = (name) => this.host.querySelector(`[data-part="${name}"]`);
+      this.el = this.host.querySelector('.sseg');
+      this.input = part('input');
+      this.parts = {
+        said: part('said'), num: part('num'), name: part('name'),
+        segs: part('segs'), ticks: part('ticks'), read: part('read'),
+      };
+    }
+
+    // ---- paint -------------------------------------------------------------
+
+    paint() {
+      const set = this.isSet;
+      const at = this._value;
+      const label = set ? this.o.segments[at] : this.o.unsetLabel;
+
+      this.el.dataset.set = set ? 'true' : 'false';
+      if (this.parts.said) this.parts.said.textContent = label;
+      if (this.parts.num)
+        this.parts.num.innerHTML = set
+          ? esc(String(this.numerals[at])) : '<i class="sseg-empty"></i>';
+      if (this.parts.name) this.parts.name.textContent = label;
+
+      // The range has to sit somewhere even with nothing chosen, and the bottom
+      // of the scale is the only place it can rest. Nothing reads this value.
+      this.input.value = String(set ? at : 0);
+      // A range reads its own number out, which here would be a position on a
+      // scale whose answer is a state - and would read "0" for a slider nobody
+      // has touched.
+      this.input.setAttribute('aria-valuetext', label);
+
+      Array.from(this.parts.segs.children).forEach((seg, i) => {
+        seg.dataset.passed = set && i < at ? 'true' : 'false';
+        seg.dataset.on = set && i === at ? 'true' : 'false';
+      });
+      if (this.parts.ticks)
+        Array.from(this.parts.ticks.children).forEach((tick, i) => {
+          tick.dataset.on = set && i === at ? 'true' : 'false';
+        });
+
+      for (const button of this.el.querySelectorAll('.sseg-btn')) {
+        const dir = +button.dataset.step;
+        // Unanswered, both ends are live: either one is the first answer.
+        button.disabled = set && (dir < 0 ? at === 0 : at === this.count - 1);
+      }
+
+      // The panel is a live region, so the same state is never rewritten:
+      // re-announcing the paragraph someone is already reading, every time the
+      // handle moves inside one segment, talks over them.
+      const read = this.parts.read;
+      if (read && read.dataset.at !== this._readKey()) {
+        read.dataset.at = this._readKey();
+        read.innerHTML = this._readHTML();
+      }
+    }
+
+    // ---- input -------------------------------------------------------------
+
+    _wire() {
+      const input = this.input;
+
+      // Keyboard. Every key a range answers is taken, not just the arrows: Home
+      // on an unanswered slider means the first state, which is exactly the
+      // press the range would swallow because it already holds that value.
+      input.addEventListener('keydown', (e) => {
+        if (!(e.key in KEYS)) return;
+        e.preventDefault();
+        const step = KEYS[e.key];
+        if (step === null) this.set(e.key === 'Home' ? 0 : this.count - 1);
+        else this.nudge(step);
+      });
+
+      // The stepper. Deliberately does not settle: it is a press repeated to
+      // climb the scale, so anything that closes or advances on settle would
+      // make it unusable. Same for the arrow keys above.
+      if (this.o.stepper)
+        this.el.addEventListener('click', (e) => {
+          const button = e.target.closest('.sseg-btn');
+          if (button) this.nudge(+button.dataset.step);
+        });
+
+      // Fallback for anything without PointerEvent: let the native range drive
+      // itself. Programmatic value changes do not fire `input`, so this cannot
+      // double up with the pointer path below.
+      input.addEventListener('input', () => this.set(+input.value));
+
+      if (typeof PointerEvent !== 'function') return;
+      this._wirePointer();
+    }
+
+    _wirePointer() {
+      const input = this.input;
+
+      // Where the pointer is along the run, or nothing where nothing has been
+      // laid out and every box measures zero - answering from a measurement of
+      // nothing would put the handle at the first segment.
+      const at = (e) => {
+        const box = input.getBoundingClientRect();
+        if (!box.width) return null;
+        return Math.floor((e.clientX - box.left) / box.width * this.count);
+      };
+
+      const drag = (e) => {
+        if (!this._dragging) return;
+        const found = at(e);
+        if (found === null) return;
+        // This is what stops the native range moving itself, which would
+        // otherwise fight the geometric read above.
+        e.preventDefault();
+        this.set(found);
+      };
+
+      input.addEventListener('pointerdown', (e) => {
+        this._dragging = true;
+        this.el.dataset.dragging = 'true';
+        // Taking the press means taking the focus with it. Preventing the
+        // default in `drag` also cancels the compatibility mouse event that
+        // would have focused the control - which would leave someone who
+        // pressed the run unable to fine-tune it with the arrow keys.
+        input.focus({ preventScroll: true });
+        if (this.o.onDragStart) this.o.onDragStart();
+        // The press itself, before capture is asked for. Capture only decides
+        // where the rest of the gesture is delivered, and a browser can refuse
+        // it outright - it throws when it no longer considers the pointer
+        // active - so asking first would let a refusal swallow the answer that
+        // was just given.
+        drag(e);
+        try {
+          if (input.setPointerCapture) input.setPointerCapture(e.pointerId);
+        } catch (refused) { /* the gesture still works, over the run itself */ }
+      });
+
+      input.addEventListener('pointermove', drag);
+
+      for (const type of ['pointerup', 'pointercancel'])
+        input.addEventListener(type, () => {
+          if (!this._dragging) return;
+          this._dragging = false;
+          this.el.dataset.dragging = 'false';
+          if (this.isSet && this.o.onSettle) this.o.onSettle(this._value);
+        });
+    }
+  }
+
+  if (typeof module === 'object' && module.exports) module.exports = SegmentSlider;
+  else root.SegmentSlider = SegmentSlider;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+// Goal 9 ("Support Advisory Services") is dynamic text per the workbook's new
+// Goal9_lbl/Goal9_desc named ranges (Profile!B20/E20 – see DESIGN_DECISIONS.md §26),
+// which are themselves formulas keyed off the Industry field: =IF(C5="Accounting",
+// C24,C25) and the equivalent for the description. The Accounting branch absorbs the
+// old "Expand Capabilities" goal's "new service lines" idea into its wording, which is
+// part of why Expand Capabilities is one of the four goals being deleted below rather
+// than staying a separate goal. Every other goal on this page is static text; only
+// this one tracks the Industry dropdown live.
+var GOAL9_BY_INDUSTRY = {
+  Accounting: {
+    name: 'Expand Advisory Services',
+    desc: 'Turn compliance data into advisory-grade insight and new service lines that raise billable value.'
+  },
+  other: {
+    name: 'Elevate Decision Support',
+    desc: 'Turn compliance data into decision-grade insight that guides investment, planning, and stakeholder reporting.'
+  }
+};
+function goal9Content(){
+  var industry = document.getElementById('industry').value;
+  return GOAL9_BY_INDUSTRY[industry] || GOAL9_BY_INDUSTRY.other;
+}
+
+// ---- Goal data: flattened into one global sequence (§15). Four goals removed per
+// §26 (Strengthen Integration, Reduce Total Cost, Drive Team Adoption, Expand
+// Capabilities); Goal 9's name/desc are seeded from goal9Content() rather than
+// hardcoded, since they're dynamic – see above. ----
+var GOALS = [
+  {section:'goals-capacity', name:'Reduce Cycle Time', desc:'Shorten the time from K-1 receipt to filing-ready data so deadlines are met with less effort.'},
+  {section:'goals-capacity', name:'Centralize & Standardize', desc:'Unify intake, naming, and workflows into one governed source of truth across teams.'},
+  {section:'goals-capacity', name:'Support Scalable Growth', desc:'Absorb rising K-1 volume and complexity without adding proportional headcount or cost.'},
+  {section:'goals-confidence', name:'Improve Accuracy', desc:'Reduce errors and rework, and produce data you can defend to auditors, regulators, and LPs.'},
+  {section:'goals-confidence', name:'Elevate Client Experience', desc:'Deliver transparent, trustworthy results that drive retention, re-ups, and referrals.'},
+  Object.assign({section:'goals-capability'}, goal9Content())
+];
+var GOAL9_INDEX = GOALS.length - 1;
+var GOAL_KEYS = ['reduce_time','standardize','scalable_growth','accuracy','client_experience','advisory_services'];
+var PREFILL_GOALS = {{ (goals if goals else none) | tojson }};
+var LEVELS = ['None','Low','Medium','High','Top'];
+// §17 item 1 addendum applied here: 'Med' -> 'Medium' (logged earlier, then built
+// into altprofile.html per §24, now promoted into this live page per §25).
+var TICK_LABELS = ['None','Low','Medium','High','Top'];
+
+var sliders = new Array(GOALS.length).fill(null);
+var cards = new Array(GOALS.length).fill(null);
+var heads = new Array(GOALS.length).fill(null);
+var nameEls = new Array(GOALS.length).fill(null);
+var descEls = new Array(GOALS.length).fill(null);
+var infoToggles = new Array(GOALS.length).fill(null);
+var scoreEls = new Array(GOALS.length).fill(null);
+var sparkEls = new Array(GOALS.length).fill(null);
+var mounts = new Array(GOALS.length).fill(null);
+var frontier = 0;
+// Single-open accordion (§17 item 4 / §24): the one card currently expanded.
+// Starts on card 0, matching its data-state="open" set at creation below.
+var openIndex = 0;
+
+function chevronSvg(){
+  return '<svg viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+function updateScoreLabel(i){
+  var el = scoreEls[i];
+  if (sliders[i].isSet) {
+    el.textContent = LEVELS[sliders[i].value].toUpperCase();
+    el.dataset.scored = 'true';
+  } else {
+    el.textContent = 'NOT SCORED';
+    el.dataset.scored = 'false';
+  }
+}
+
+// Collapsed-row sparkline (§17 item 3 / §22): a miniature version of the segment bar,
+// filled up to and including the answer. Only visible while collapsed (CSS hides it
+// when open); not-yet-reached/unscored rows render with every segment unfilled rather
+// than omitting the sparkline, so every collapsed row looks the same shape at a glance.
+function updateSpark(i){
+  var segs = sparkEls[i].children;
+  for (var s = 0; s < segs.length; s++){
+    segs[s].dataset.filled = (sliders[i].isSet && s <= sliders[i].value) ? 'true' : 'false';
+  }
+}
+
+function clearValidationMessage(){
+  var msg = document.getElementById('startValidationMsg');
+  if (msg) msg.textContent = '';
+}
+
+// Single-open accordion state helper (§17 item 4 / §24). Every time a card
+// opens, its description-reveal + info-toggle reset back to shown (§26 flipped
+// the default from hidden to shown) – so a card never reopens silently
+// remembering it was left hidden; the icon is always back to its black/white
+// "showing" state, ready to be dismissed with a click.
+function setCardState(i, state){
+  cards[i].dataset.state = state;
+  heads[i].setAttribute('aria-expanded', state === 'open' ? 'true' : 'false');
+  if (state === 'open') {
+    cards[i].dataset.descOpen = 'true';
+    infoToggles[i].setAttribute('aria-expanded', 'true');
+    infoToggles[i].setAttribute('aria-label', 'Hide ' + GOALS[i].name + ' description');
+  }
+}
+
+// Open card i, closing whatever else is open. The single source of truth for
+// which card is expanded – everything else (initial build, settle, review
+// toggle) routes through this.
+function openCard(i){
+  if (openIndex !== null && openIndex !== i) setCardState(openIndex, 'closed');
+  setCardState(i, 'open');
+  openIndex = i;
+}
+
+// Click, or Enter/Space, on an answered card's header (§24 – the companion
+// keyboard fix this needs, since the header was mouse-only before). Opening a
+// different answered card for review closes whatever's currently open;
+// closing the currently-open review card returns to the frontier rather than
+// leaving nothing open. Unscored goals aren't clickable at all (unchanged
+// from §15/§16), so this only ever runs for a goal that's been answered.
+function toggleOrReview(i){
+  if (cards[i].dataset.clickable !== 'true') return;
+  openCard(openIndex === i ? frontier : i);
+}
+
+// The collapse-and-advance trigger for item 4/5 (§24). Pointer fires this via
+// onSettle, on release; keyboard fires it via blur/focusout on the slider
+// input, once the user actually tabs away – not on every arrow press, which
+// would collapse the card after the very first nudge and leave no way to
+// keep adjusting before moving on.
+//
+// Terminal case: answering the last goal leaves it open rather than
+// collapsing and instantly reopening itself, since there's nothing further
+// along the frontier to advance to.
+function settleCard(i){
+  if (!sliders[i].isSet) return;
+  if (i === frontier) {
+    if (frontier < GOALS.length - 1) {
+      frontier = frontier + 1;
+      openCard(frontier);
+    }
+    // else: last goal, stays open – no collapse/reopen flicker.
+  } else {
+    // Reviewing an earlier answer: settling it returns to the frontier
+    // rather than leaving the review card open indefinitely.
+    openCard(frontier);
+  }
+}
+
+function handleChange(i){
+  clearValidationMessage();
+  updateScoreLabel(i);
+  updateSpark(i);
+  var clickable = sliders[i].isSet;
+  cards[i].dataset.clickable = clickable ? 'true' : 'false';
+  // Keyboard accessibility mirrors the existing mouse-click gating: only an
+  // answered goal's header is a real, focusable, Enter/Space-operable button.
+  if (clickable) {
+    heads[i].setAttribute('tabindex', '0');
+    heads[i].setAttribute('role', 'button');
+  } else {
+    heads[i].removeAttribute('tabindex');
+    heads[i].removeAttribute('role');
+  }
+}
+
+function buildCard(i){
+  var goal = GOALS[i];
+  var container = document.getElementById(goal.section);
+
+  var card = document.createElement('div');
+  card.className = 'goal-card';
+  card.dataset.state = (i === 0) ? 'open' : 'closed';
+  card.dataset.clickable = 'false';
+  // Description shows by default (§26 – flipped from §24's hidden-by-default); the
+  // "i" icon hides it, not reveals it.
+  card.dataset.descOpen = 'true';
+
+  var head = document.createElement('div');
+  head.className = 'goal-row-head';
+  head.setAttribute('aria-expanded', (i === 0) ? 'true' : 'false');
+
+  var chevron = document.createElement('span');
+  chevron.className = 'gc-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.innerHTML = chevronSvg();
+
+  var nameEl = document.createElement('span');
+  nameEl.className = 'gc-name';
+  nameEl.textContent = goal.name;
+
+  // Info-toggle ("i-Note", §17 item 2 folded in per discussion – see §24):
+  // reveals/hides the description block below. A real <button>, so Tab and
+  // Enter/Space already work with no extra keydown handling; the click
+  // handler just needs to stop the click from also bubbling up into the
+  // header's own open/close toggle.
+  var infoToggle = document.createElement('button');
+  infoToggle.type = 'button';
+  infoToggle.className = 'gc-info-toggle';
+  infoToggle.textContent = 'i';
+  // Starts "expanded" since the description shows by default (§26).
+  infoToggle.setAttribute('aria-expanded', 'true');
+  infoToggle.setAttribute('aria-label', 'Hide ' + goal.name + ' description');
+  infoToggle.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = card.dataset.descOpen !== 'true';
+    card.dataset.descOpen = open ? 'true' : 'false';
+    infoToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    infoToggle.setAttribute('aria-label', (open ? 'Hide ' : 'Show ') + goal.name + ' description');
+  });
+
+  var scoreEl = document.createElement('span');
+  scoreEl.className = 'gc-score';
+  scoreEl.textContent = 'NOT SCORED';
+  scoreEl.dataset.scored = 'false';
+
+  var spark = document.createElement('span');
+  spark.className = 'gc-spark';
+  spark.setAttribute('aria-hidden', 'true');
+  for (var sp = 0; sp < LEVELS.length; sp++){
+    var seg = document.createElement('i');
+    seg.dataset.filled = 'false';
+    spark.appendChild(seg);
+  }
+
+  head.appendChild(chevron);
+  head.appendChild(nameEl);
+  head.appendChild(infoToggle);
+  head.appendChild(scoreEl);
+  head.appendChild(spark);
+
+  var body = document.createElement('div');
+  body.className = 'goal-body';
+  var descReveal = document.createElement('div');
+  descReveal.className = 'gc-desc-reveal';
+  descReveal.textContent = goal.desc;
+  var mount = document.createElement('div');
+  mount.className = 'goal-slot';
+  body.appendChild(descReveal);
+  body.appendChild(mount);
+
+  card.appendChild(head);
+  card.appendChild(body);
+  container.appendChild(card);
+
+  // Click, or Enter/Space when the header itself is focused, both route
+  // through the same toggleOrReview logic – see above.
+  head.addEventListener('click', function(){ toggleOrReview(i); });
+  head.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggleOrReview(i);
+  });
+
+  cards[i] = card;
+  heads[i] = head;
+  nameEls[i] = nameEl;
+  descEls[i] = descReveal;
+  infoToggles[i] = infoToggle;
+  scoreEls[i] = scoreEl;
+  sparkEls[i] = spark;
+  mounts[i] = mount;
+
+  var prefillValue = (PREFILL_GOALS && PREFILL_GOALS[GOAL_KEYS[i]] !== undefined)
+    ? PREFILL_GOALS[GOAL_KEYS[i]] : null;
+  sliders[i] = new SegmentSlider(mount, {
+    segments: LEVELS,
+    value: prefillValue,
+    readout: 'none',
+    unsetLabel: 'NOT SCORED',
+    ticks: TICK_LABELS,
+    stepper: false,
+    ends: false,
+    ariaLabel: goal.name + ' priority',
+    onChange: function(){ handleChange(i); },
+    onSettle: function(){ settleCard(i); },
+  });
+  if (sliders[i].isSet) handleChange(i);
+
+  // Keyboard settle (§24): onSettle above only ever fires on pointer
+  // release, so arrow-key input – which has no equivalent "gesture ended"
+  // moment – uses blur/focusout on the slider's own input as its stand-in.
+  // That's what lets a keyboard user press an arrow key several times before
+  // the card collapses: nothing fires until they actually tab away.
+  sliders[i].input.addEventListener('blur', function(){ settleCard(i); });
+
+  updateSpark(i);
+}
+
+for (var gi = 0; gi < GOALS.length; gi++) buildCard(gi);
+
+if (PREFILL_GOALS) {
+  var lastAnswered = -1;
+  for (var pi = 0; pi < GOALS.length; pi++) { if (sliders[pi].isSet) lastAnswered = pi; }
+  frontier = Math.min(lastAnswered + 1, GOALS.length - 1);
+  openCard(frontier);
+}
+
+// Goal 9 tracks the Industry field live (§26): changing Industry re-derives its
+// name/description from goal9Content() and pushes the update everywhere that
+// content appears – the visible name and description text, the slider's own
+// accessible name, and the info-toggle's current show/hide label. GOALS[GOAL9_INDEX]
+// is mutated in place (not reassigned) so anything that reads goal.name/goal.desc
+// through a closure – setCardState(), the info-toggle's click handler – picks up
+// the change automatically the next time it runs.
+document.getElementById('industry').addEventListener('change', function(){
+  var content = goal9Content();
+  var goal = GOALS[GOAL9_INDEX];
+  goal.name = content.name;
+  goal.desc = content.desc;
+  nameEls[GOAL9_INDEX].textContent = goal.name;
+  descEls[GOAL9_INDEX].textContent = goal.desc;
+  sliders[GOAL9_INDEX].input.setAttribute('aria-label', goal.name + ' priority');
+  var shown = cards[GOAL9_INDEX].dataset.descOpen === 'true';
+  infoToggles[GOAL9_INDEX].setAttribute('aria-label', (shown ? 'Hide ' : 'Show ') + goal.name + ' description');
+});
+
+document.getElementById('startBtn').addEventListener('click', function(){
+  var answeredCount = sliders.filter(function(s){ return s && s.isSet; }).length;
+  if (answeredCount < GOALS.length) {
+    document.getElementById('startValidationMsg').textContent = 'Rank all ' + GOALS.length + ' goals to continue.';
+    return;
+  }
+  for (var i = 0; i < GOALS.length; i++) {
+    document.getElementById('goal_' + GOAL_KEYS[i]).value = sliders[i].value;
+  }
+  document.getElementById('profileForm').submit();
+});
+</script>
+</body>
+</html>
