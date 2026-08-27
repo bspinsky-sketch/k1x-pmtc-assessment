@@ -4,8 +4,8 @@ Replace [PROJECT] with project codename throughout.
 """
 from flask import (render_template, request, session, redirect, url_for,
                    jsonify, make_response)
-from app.blueprints.project_name import bp
-from app.blueprints.project_name.calculator import run_calculation, read_defaults
+from app.blueprints.pmtc import bp
+from app.blueprints.pmtc.calculator import run_calculation, read_defaults
 
 # ---------------------------------------------------------------------------
 # Fresh start
@@ -13,7 +13,7 @@ from app.blueprints.project_name.calculator import run_calculation, read_default
 @bp.route('/', methods=['GET'])
 def index():
     session.clear()
-    return render_template('project_name/step1_profile.html', step=1)
+    return render_template('pmtc/step1_profile.html', step=1)
 
 # ---------------------------------------------------------------------------
 # Edit profile (mid-flow back navigation -- preserves session)
@@ -21,7 +21,7 @@ def index():
 @bp.route('/edit_profile', methods=['GET'])
 def edit_profile():
     profile = session.get('profile', {})
-    return render_template('project_name/step1_profile.html',
+    return render_template('pmtc/step1_profile.html',
                            step=1, profile=profile)
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ def step1_profile():
     session['assumption_defaults'] = read_defaults()
     session['step'] = 2
     session.modified = True
-    return redirect(url_for('project_name.challenges'))
+    return redirect(url_for('pmtc.challenges'))
 
 # ---------------------------------------------------------------------------
 # Challenges
@@ -48,14 +48,14 @@ def step1_profile():
 @bp.route('/challenges', methods=['GET'])
 def challenges():
     if 'profile' not in session:
-        return redirect(url_for('project_name.index'))
-    return render_template('project_name/step2_challenges.html',
+        return redirect(url_for('pmtc.index'))
+    return render_template('pmtc/step2_challenges.html',
                            step=2, profile=session['profile'])
 
 @bp.route('/step2_challenges', methods=['POST'])
 def step2_challenges():
     if 'profile' not in session:
-        return redirect(url_for('project_name.index'))
+        return redirect(url_for('pmtc.index'))
     priorities = {f'ch{i}': request.form.get(f'ch{i}', 'None') for i in range(1, 8)}
     session['priorities'] = priorities
     kpis = run_calculation(session['profile'], priorities,
@@ -63,7 +63,7 @@ def step2_challenges():
     session['kpis'] = kpis
     session['step'] = 3
     session.modified = True
-    return redirect(url_for('project_name.summary'))
+    return redirect(url_for('pmtc.summary'))
 
 # ---------------------------------------------------------------------------
 # Summary
@@ -71,10 +71,10 @@ def step2_challenges():
 @bp.route('/summary', methods=['GET'])
 def summary():
     if 'kpis' not in session:
-        return redirect(url_for('project_name.index'))
+        return redirect(url_for('pmtc.index'))
     investment_defaults = session.get('investment_defaults', {})
     investment = session.get('investment', investment_defaults)
-    return render_template('project_name/summary.html',
+    return render_template('pmtc/summary.html',
                            step=3,
                            profile=session['profile'],
                            kpis=session['kpis'],
@@ -89,7 +89,7 @@ def summary():
 @bp.route('/assumptions', methods=['GET', 'POST'])
 def assumptions():
     if 'profile' not in session:
-        return redirect(url_for('project_name.index'))
+        return redirect(url_for('pmtc.index'))
     defaults = session.get('assumption_defaults', {})
     if request.method == 'POST':
         overrides = {k: v for k, v in request.form.items() if k != 'csrf_token'}
@@ -99,8 +99,8 @@ def assumptions():
         session['kpis'] = kpis
         session['capture_done'] = False
         session.modified = True
-        return redirect(url_for('project_name.summary'))
-    return render_template('project_name/assumptions.html',
+        return redirect(url_for('pmtc.summary'))
+    return render_template('pmtc/assumptions.html',
                            step=3,
                            defaults=defaults,
                            assumptions=session.get('assumptions', {}))
@@ -111,8 +111,8 @@ def assumptions():
 @bp.route('/calculators', methods=['GET'])
 def calculators():
     if 'kpis' not in session:
-        return redirect(url_for('project_name.index'))
-    return render_template('project_name/calculators.html',
+        return redirect(url_for('pmtc.index'))
+    return render_template('pmtc/calculators.html',
                            step=4,
                            kpis=session['kpis'],
                            priorities=session.get('priorities', {}))
@@ -123,8 +123,8 @@ def calculators():
 @bp.route('/download', methods=['GET'])
 def download():
     if 'kpis' not in session:
-        return redirect(url_for('project_name.index'))
-    from app.blueprints.project_name.report import generate_report
+        return redirect(url_for('pmtc.index'))
+    from app.blueprints.pmtc.report import generate_report
     investment = session.get('investment') or session.get('investment_defaults', {})
     pptx_bytes = generate_report(
         session['kpis'], session['profile'],
@@ -146,14 +146,14 @@ def send_report():
     email = request.form.get('email', '').strip()
     if not email:
         return jsonify({'error': 'Email required'}), 400
-    from app.blueprints.project_name.emailer import send_report_email
+    from app.blueprints.pmtc.emailer import send_report_email
     investment = session.get('investment') or session.get('investment_defaults', {})
     send_report_email(email, session['profile'], session['kpis'],
                       session.get('priorities', {}), investment)
     # Data capture email backfill
     if 'profile' in session:
         try:
-            from app.blueprints.project_name.data_capture import update_email
+            from app.blueprints.pmtc.data_capture import update_email
             update_email(email, session['profile'].get('company', ''))
         except Exception:
             pass

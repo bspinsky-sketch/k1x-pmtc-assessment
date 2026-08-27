@@ -70,7 +70,7 @@ def _active_benefits(priorities):
     """Return set of benefit IDs active based on priorities (High or Medium)."""
     # TODO: implement from challenge-benefit matrix in CLAUDE.md
     # Example:
-    # from app.blueprints.project_name.calculator import BENEFIT_MATRIX
+    # from app.blueprints.pmtc.calculator import BENEFIT_MATRIX
     # active = set()
     # for ch_id, level in priorities.items():
     #     if level in ('High', 'Medium'):

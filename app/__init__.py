@@ -14,8 +14,8 @@ def create_app():
     app.config['AUTH0_CALLBACK_URL'] = os.environ.get('AUTH0_CALLBACK_URL', '')
 
     # Register blueprint
-    from app.blueprints.project_name import bp as project_bp
-    app.register_blueprint(project_bp)
+    from app.blueprints.pmtc import bp as pmtc_bp
+    app.register_blueprint(pmtc_bp)
 
     # Auth middleware
     from app.auth import before_request_hook
