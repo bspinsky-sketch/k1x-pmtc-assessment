@@ -207,7 +207,7 @@ a{color:inherit;}
 .stat-num{font-family:var(--font-display);font-size:38px;line-height:1;letter-spacing:-.03em;color:var(--signal);margin-bottom:10px;}
 .stat-num sup{font-size:.5em;vertical-align:.6em;}
 .stat-cap{font-size:13px;color:var(--slate-light);line-height:1.5;}
-.placeholder-note{font-family:var(--font-mono);font-size:11px;color:var(--slate);letter-spacing:.05em;margin-bottom:44px;}
+.stat-note{font-family:var(--font-mono);font-size:11px;color:var(--slate);letter-spacing:.05em;margin-bottom:44px;}
 
 /* The Picture1.png backdrop is a true full-bleed band, matching the Profile/Assessment
    .hero-band pattern — a body-level sibling before .shell, no border-radius, edge to edge.
@@ -405,24 +405,78 @@ a{color:inherit;}
        rather than a second <h1> – the page-level headline above stays the only <h1>. ===== -->
   <header class="page-header">
     <h2 class="h1">Here's what closing the gap can deliver for you.</h2>
-    <p class="lede">The distance between where you scored and where the top band operates isn't abstract – it shows up directly in cycle time, rework, and what your team has room to do beyond filing.</p>
+    <p class="lede">The distance between where you scored and best-in-class maturity isn't abstract – it shows up directly in cycle time, manual effort, and what your team has room to do beyond compliance work.</p>
   </header>
 
   <div class="stat-grid">
     <div class="stat-tile">
-      <div class="stat-num">2.3&times;</div>
-      <div class="stat-cap">Faster average cycle time reported by firms operating at Level 4+ maturity</div>
+      <div class="stat-num">2.9&times;</div>
+      <div class="stat-cap">Faster average cycle time, achieved by firms operating at best-in-class maturity</div>
     </div>
     <div class="stat-tile">
-      <div class="stat-num">60<sup>%</sup></div>
-      <div class="stat-cap">Fewer manual touchpoints once validation and integration are automated end to end</div>
+      <div class="stat-num">90<sup>%</sup></div>
+      <div class="stat-cap">Fewer manual touchpoints once data collection and validation are automated end to end</div>
     </div>
     <div class="stat-tile">
-      <div class="stat-num">1 in 3</div>
-      <div class="stat-cap">Top-band firms use their K-1 data for advisory work, not just filing</div>
+      <div class="stat-num">61<sup>%</sup></div>
+      <div class="stat-cap">Rise in advisory revenue as firms automate away manual compliance work</div>
     </div>
   </div>
-  <p class="placeholder-note">Placeholder figures – to be sourced and agreed with K1x before this goes live.</p>
+  <p class="stat-note">Figures reflect K1x client results and industry benchmarks at best-in-class maturity.</p>
+
+  <!-- ===== INTERNAL — BDR/AE stat sourcing, not rendered on page (see DESIGN_DECISIONS.md §43) =====
+       The three tiles above deliberately carry only a short, generic citation on the page itself —
+       see §43 for why: the goal is to prompt a prospect's "where did these numbers come from?"
+       rather than pre-empt it. This block is the answer to that question, for whoever picks up the
+       conversation. It's placed here in the markup — not on a separate page or behind a login — so
+       it ships with the page itself and is trivial to find in the source; when this becomes a real
+       app, wire it into whatever internal/staff view a logged-in BDR or AE gets (e.g. a "sourcing"
+       panel or tooltip on this section, gated to internal roles), rather than rendering the JSON
+       below directly. Full research trail and alternates considered: DESIGN_DECISIONS.md §39–43. ===== -->
+  <script type="application/json" id="stat-tile-sourcing" data-internal="true">
+  {
+    "note": "Internal sourcing detail for the three stat tiles above. Not for prospect display — see DESIGN_DECISIONS.md §43.",
+    "tiles": [
+      {
+        "figure": "2.9×",
+        "caption": "Faster average cycle time, achieved by firms operating at best-in-class maturity",
+        "underlyingPublishedStat": "66% cycle time reduction",
+        "source": "K1x, Inc. — k1x.io/platform/, \"BENEFITS\" section",
+        "sourceType": "K1x-published, general/platform-wide, unattributed to a specific product or client",
+        "verifiedLive": "Aug 2026 (fetched and confirmed this session)",
+        "disclosure": "2.9× is a derived conversion, not a figure K1x states in multiplier form. A 66% reduction means the new cycle time is 34% of the original: 1 ÷ 0.34 ≈ 2.9×.",
+        "designDecisionsRef": "§42, §43"
+      },
+      {
+        "figure": "90%",
+        "caption": "Fewer manual touchpoints once data collection and validation are automated end to end",
+        "underlyingPublishedStat": "90% manual data extraction elimination (echoed on the k1x.io homepage as \"90% reduction in manual data entry\")",
+        "source": "K1x, Inc. — k1x.io/platform/, \"BENEFITS\" section",
+        "sourceType": "K1x-published, general/platform-wide, unattributed to a specific product or client",
+        "verifiedLive": "Aug 2026 (fetched and confirmed this session)",
+        "disclosure": null,
+        "designDecisionsRef": "§42, §43"
+      },
+      {
+        "figure": "61%",
+        "caption": "Rise in advisory revenue as firms automate away manual compliance work",
+        "underlyingPublishedStat": "61% rise in advisory services revenue at CPA firms since 2022",
+        "source": "AICPA / CPA.com, \"Future Ready Accountant Report,\" Dec 2024",
+        "sourceType": "Third-party industry benchmark — NOT a K1x-measured outcome. Describes an industry trend K1x's automation is positioned to help firms capture.",
+        "verifiedLive": "Aug 2026",
+        "disclosure": "Present this honestly as an industry trend, not a K1x client result, if asked directly.",
+        "designDecisionsRef": "§41, §42, §43"
+      }
+    ],
+    "alternatesConsidered": [
+      "26% savings in end-to-end processing costs (K1x, k1x.io/platform/ — general, unattributed) — dropped in favor of the 61% advisory-revenue figure for tile 3's theme.",
+      "15% margin increase (K1x-attributed, single case — 'Large US Insurance Company' — tied to a 55–65% processing-time cut) — dropped because it's single-case and partly K-1-processing-specific, not general/platform-wide.",
+      "White paper p.10 K-1-specific figures (90% / 11+ hrs per week / 6–8 weeks / 26%+) — strongest single external source (K1x, \"Schedule K-1 Process Maturity Model\" white paper, ~2023) but scoped to K-1 processing only; dropped once Ben clarified K1x sells multiple products and the tiles should stay general.",
+      "1,278 person hours reclaimed — flagged as likely misattributed in K1x's own internal PoV deck (reused for both K1 Aggregator and, separately, a 990 Tracker client case); not recommended for use at all."
+    ],
+    "fullResearchTrail": "DESIGN_DECISIONS.md §39 (k1x.io public sourcing pass), §40 (K1x's gated maturity-model white paper, reviewed directly), §41 (K1x internal sales decks via Ben's shared Google Drive), §42 (redirect to platform-general stats), §43 (final build)."
+  }
+  </script>
 
   <div class="page-footer">
     <a class="btn btn-secondary" href="{{ url_for('pmtc.assessment_page') }}">&larr; Back</a>
