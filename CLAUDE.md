@@ -2,7 +2,16 @@
 
 **Purpose:** Authoritative project reference for Claude. Read at every session start before any substantive work.
 
-**Last updated:** 2026-08-28 16:45 EDT (P047 -- Peer Leaders score fixed, wrong source table + Excel-rounding mismatch)
+**Last updated:** 2026-08-28 18:05 EDT (merge of `klutetr/new-domain` into `main`: custom domain live at `https://k1x-pmtc.geniusdrive.com/`, plus Ben's Results-page work -- Peer Leaders score fix and Excel rounding parity, breadcrumb bidirectional nav, narrative redesign, maturity-curve label fixes)
+
+> **READ `AFTER_YOU_PULL.md` FIRST.**
+> The tool now has a custom domain (`https://k1x-pmtc.geniusdrive.com/`), added
+> by Tristen. Nothing about the existing deploy workflow changed, but there is
+> one **launch-blocking app bug** described there: the Flask session cookie has
+> no `SameSite`/`Secure` set, so the tool's session is dropped inside the K1x
+> iframe embed and the wizard loses state. `AFTER_YOU_PULL.md` has the exact
+> fix. Confirmed still unfixed as of this merge (`app/app/__init__.py` is
+> untouched on both sides). Delete this banner once it is done.
 
 ---
 
