@@ -179,9 +179,23 @@ def capture_result(company, industry, goals, results, row_number=None):
             )
             return row_number
 
+        # append_row()'s table-detection did not honor table_range's
+        # column boundaries on a real live capture (2026-08-28): with
+        # table_range anchored at B (FIRST_DATA_COL), the actual write
+        # still landed one column to the left, starting at A -- confirmed
+        # directly against the real Sheet, not just inferred from code
+        # review. The exact mechanism inside the Sheets API/gspread's
+        # "find the table, append after it" logic isn't pinned down, but
+        # the fix doesn't need to be: pad the values with one leading
+        # blank for column A (harmless -- that column is manually
+        # maintained by Ben and was never meant to be written here
+        # anyway) and widen table_range's left edge to match, so wherever
+        # the API actually anchors the write, the real Timestamp value
+        # lands in B as intended, Company in C, and so on.
+        padded_row = [''] + row
         resp = sheet.append_row(
-            row, value_input_option='USER_ENTERED',
-            table_range=f'{FIRST_DATA_COL}{DATA_START_ROW}:{LAST_DATA_COL}{DATA_START_ROW}',
+            padded_row, value_input_option='USER_ENTERED',
+            table_range=f'A{DATA_START_ROW}:{LAST_DATA_COL}{DATA_START_ROW}',
         )
         updated_range = resp.get('updates', {}).get('updatedRange', '')
         match = re.search(r'(\d+)(?::|$)', updated_range.split('!')[-1])

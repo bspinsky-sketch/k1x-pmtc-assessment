@@ -1,0 +1,22 @@
+{
+  "name": "pmtc-infra",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.170.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.4.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

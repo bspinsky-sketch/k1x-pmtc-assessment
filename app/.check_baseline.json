@@ -22,31 +22,31 @@
     "js_functions": 12
   },
   "app/templates/pmtc/results.html": {
-    "lines": 677,
+    "lines": 731,
     "jinja_for": 2,
     "jinja_endfor": 2,
     "jinja_if": 0,
     "jinja_endif": 0,
     "css_classes": 120,
-    "css_rules": 214,
+    "css_rules": 218,
     "css_class_count": 295,
     "js_functions": 9
   },
   "app/blueprints/pmtc/routes.py": {
-    "lines": 130,
+    "lines": 161,
     "functions": 9,
     "classes": 0,
     "routes": 8
   },
   "app/blueprints/pmtc/calculator.py": {
-    "lines": 259,
+    "lines": 278,
     "functions": 2,
     "classes": 0,
     "routes": 0
   },
   "app/blueprints/pmtc/data_capture.py": {
-    "lines": 195,
-    "functions": 6,
+    "lines": 219,
+    "functions": 4,
     "classes": 0,
     "routes": 0
   },

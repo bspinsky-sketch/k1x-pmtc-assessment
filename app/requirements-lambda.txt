@@ -1,0 +1,22 @@
+# Runtime dependencies for the Lambda deployment package only.
+#
+# Deliberately a shorter list than requirements.txt: gunicorn is not needed
+# (Mangum replaces it as the thing that calls into Flask), and matplotlib /
+# python-pptx / Flask-Session are excluded because nothing in the app's actual
+# import graph uses them today -- report.py (matplotlib, python-pptx) is not
+# imported by routes.py or the blueprint, and Flask-Session is listed in
+# requirements.txt but never wired up in app/__init__.py (confirmed 2026-08-28
+# session). All three are pure historical leftovers, not active code paths.
+#
+# If report.py's PPTX/matplotlib path is ever wired in, or Flask-Session gets
+# turned on, add those packages back here -- otherwise the Lambda import will
+# fail at runtime with ModuleNotFoundError even though local dev (which still
+# installs the full requirements.txt) works fine. That mismatch is exactly the
+# kind of thing that's obvious once you know it and invisible until then.
+Flask==3.0.3
+python-dotenv==1.0.1
+gspread==6.1.2
+google-auth==2.29.0
+tzdata==2024.1
+mangum==0.19.0
+asgiref==3.8.1

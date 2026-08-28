@@ -371,11 +371,12 @@ select.field-input{appearance:none;background-image:url("data:image/svg+xml,%3Cs
     <div class="field-grid">
       <div class="field-row">
         <label class="field-label" for="company">Organization's name</label>
-        <input class="field-input" type="text" id="company" name="company" value="{{ profile.company if profile else 'Company XYZ' }}">
+        <input class="field-input" type="text" id="company" name="company" required value="{{ profile.company if profile else '' }}">
       </div>
       <div class="field-row">
         <label class="field-label" for="industry">Industry</label>
-        <select class="field-input" id="industry" name="industry">
+        <select class="field-input" id="industry" name="industry" required>
+          <option value=""{{ ' selected' if not (profile and profile.industry) else '' }} disabled>Select one</option>
           {% set _industries = ["Accounting", "Family Office / Wealth Management", "Financial Institution", "Fund", "Tax Exempt / Non-Profit"] %}
           {% for _ind in _industries %}
           <option{{ ' selected' if profile and profile.industry == _ind else '' }}>{{ _ind }}</option>
@@ -1113,7 +1114,17 @@ document.getElementById('industry').addEventListener('change', function(){
 });
 
 document.getElementById('startBtn').addEventListener('click', function(){
+  var company = document.getElementById('company').value.trim();
+  var industry = document.getElementById('industry').value;
   var answeredCount = sliders.filter(function(s){ return s && s.isSet; }).length;
+  if (!company) {
+    document.getElementById('startValidationMsg').textContent = "Enter your organization's name to continue.";
+    return;
+  }
+  if (!industry) {
+    document.getElementById('startValidationMsg').textContent = 'Select an industry to continue.';
+    return;
+  }
   if (answeredCount < GOALS.length) {
     document.getElementById('startValidationMsg').textContent = 'Rank all ' + GOALS.length + ' goals to continue.';
     return;

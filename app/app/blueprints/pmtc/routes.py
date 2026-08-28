@@ -52,12 +52,20 @@ def edit_profile():
 
 @bp.route('/profile', methods=['POST'])
 def profile_submit():
+    # No fabricated fallback text here on purpose (this used to silently
+    # substitute 'Company XYZ' / INDUSTRIES[0] for a blank submission) -- the
+    # profile page's own JS blocks submission until both fields are actually
+    # filled in, same gate it already uses for the goal sliders, so this path
+    # is only reached with a genuinely blank value if that JS is bypassed
+    # (disabled JS, a direct POST). In that case, store what was actually
+    # submitted rather than lying with placeholder data that would otherwise
+    # end up in the report and the Google Sheet capture.
     profile = {
-        'company': (request.form.get('company') or 'Company XYZ').strip(),
-        'industry': request.form.get('industry') or INDUSTRIES[0],
+        'company': (request.form.get('company') or '').strip(),
+        'industry': request.form.get('industry') or '',
     }
     if profile['industry'] not in INDUSTRIES:
-        profile['industry'] = INDUSTRIES[0]
+        profile['industry'] = ''
 
     goals = {key: _int_or_zero(request.form.get('goal_' + key)) for key in GOAL_KEYS}
     goals = {key: max(0, min(4, value)) for key, value in goals.items()}

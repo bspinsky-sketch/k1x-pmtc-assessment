@@ -1,0 +1,9 @@
+# Node dependencies (reinstalled via npm install)
+node_modules/
+
+# CDK synthesis output (regenerated via cdk synth/deploy)
+cdk.out/
+
+# Contains real secrets (Google service-account key, Flask secret key)
+# filled in locally for deploy -- must never be committed.
+cdk.json

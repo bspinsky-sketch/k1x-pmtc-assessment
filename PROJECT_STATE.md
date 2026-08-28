@@ -1,0 +1,96 @@
+# K1x PMTC Assessment -- Project State
+
+**Purpose:** Authoritative running state. Read at every session start. Updated whenever an item opens or closes.
+
+**Last updated:** 2026-08-28 16:01 EDT (repo restructure -- infra/ folded into the app/ git repo, pending Ben's commit)
+
+---
+
+## Project Status
+
+**Phase:** Phases 0-4 complete (scaffold, routing, templates, calc engine). Full Profile -> Assessment -> Results click-through verified with the Flask test client. Committed and pushed by Ben from his own machine -- `4a71a69`. Phase 7 (auth) also resolved this session -- Ben confirmed no login, Auth0 scaffold removed entirely (not committed yet). Next up: Phase 5 (PPTX, blocked on Open Item #2) or Phase 6/8/10/11/12 depending on what Ben wants to prioritize.
+**Production URL:** TBD
+**Hosting:** AWS -- confirmed by Ben 2026-08-28. Specific AWS service (ECS/Fargate, App Runner, Elastic Beanstalk, EC2, Lambda, etc.) not yet specified -- see Scoping Decisions Q1
+**Deploy method:** TBD -- pending which AWS service (ECS/Fargate, App Runner, Elastic Beanstalk, EC2, Lambda) Ben picks
+**Calc engine tier:** **Tier 1 -- hand-port to Python.** Resolved 2026-08-26. See CLAUDE.md.
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | Pre-project setup (structural workbook pass, PPT audit) | **Done.** Repo cloned, blueprint renamed to `pmtc`, workbook copied into `app/WORKBOOK.xlsx`, `.env` created, dependencies verified installable, Flask app factory confirmed loading, committed and pushed by Ben from his own machine (commit `c4996eb`). |
+| 1 | Design lock and wireframe | **Done -- locked.** Wireframe built and decision-logged (`wireframe/DESIGN_DECISIONS.md`, 38 sections). Ben confirmed 2026-08-28: design is locked, no further changes. |
+| 2 | Flask scaffold | **Done.** `routes.py` rewritten for the confirmed routing plan: `GET /`, `GET/POST /profile`, `GET /edit_profile` (alias), `GET/POST /assessment`, `GET /results`, `POST /api/lead`. Old ITSM-flow routes (`/step1_profile`, `/challenges`, `/assumptions`, `/calculators`, `/download`, `/send_report`, `/api/recalc_investment`) removed. |
+| 3 | Production templates and input forms | **Done.** `profile.html`/`assessment.html`/`results.html` ported from the approved wireframe verbatim (CSS, vendored SegmentSlider JS, base64 icon SVGs all preserved byte-for-byte) with surgical edits only: `<form>` wrapper + hidden inputs + submit-via-POST instead of `location.href`, static asset URLs via `url_for`, session prefill (`PREFILL_GOALS`/`PREFILL_RATINGS`), Results page's hardcoded demo numbers replaced with real computed values from `calculator.py`. Old starter templates (`assumptions.html`, `base.html`, `calculators.html`, `modal_base.html`, `step1_profile.html`, `step2_challenges.html`, `summary.html`) deleted. |
+| 4 | Calculations engine (Tier 1 -- Python hand-port) | **Done.** `calculator.py` hand-ports the workbook's goal-weighting, strength-rank, weighted-gap-rank, peer-comparison, and archetype-band logic exactly (verified by hand-computing one test case against the algorithm and cross-checking the `T`/`S`/`U` column tie-break behavior). `run_calculation()` returns everything the Results page needs. See CLAUDE.md Key Decisions Log for the archetype-clamp and advice-table-deferral calls made along the way. |
+| 5 | PPT generation | Blocked -- no template exists yet |
+| 6 | Email delivery | Pending |
+| 7 | Auth scaffold | **Done -- removed.** Ben confirmed 2026-08-26/27 the tool has no login. Auth0 scaffold (`app/auth.py`, `AUTH_REQUIRED`/`AUTH0_*` config in `app/__init__.py`, `authlib` dependency, `.env`/`.env.example` Auth0 block) deleted rather than left disabled. Verified app still boots and all routes resolve with the Flask test client. Not yet committed -- Ben to commit from his own machine. |
+| 8 | Hosting and deployment | **Done -- live.** Deployed 2026-08-28 to the shared AWS account (`019163347448`), Lambda behind a Function URL, via `infra/`'s CDK app (`AppStack`). Live at `https://ssida3ob72gzabi2ai5r6kqzle0ltmcp.lambda-url.us-east-1.on.aws/` -- Ben confirmed end-to-end (Profile -> Assessment -> Results) on the real deployed instance, not just a local dev server. Two real bugs caught and fixed before this deploy: a Windows-incompatible `cp` shell call in the Lambda bundling code, and a blanket-copy bug that would have shipped `.env` (real secrets) into the deployed function -- see CLAUDE_problems.md P044. No custom domain yet (Function URL is the only address); email delivery (Q3) still open; secrets are still plain Lambda environment variables, not Secrets Manager (flagged as a future hardening step). See SESSION_LOG.md's 2026-08-28 14:49 EDT entry for the full deploy story and `infra/README.md` for redeploy steps. |
+| 9 | Full report push | Blocked -- same as Phase 5 |
+| 10 | Data capture | **Done.** `data_capture.py` rewritten from scratch against the schema Ben laid out in the workbook (`NR!G2:AM3`) and his own Google Sheet (columns A:AG, data from row 4, column A untouched). Row written/updated at `POST /assessment` (`capture_result()` -- appends the first time, updates in place on revise-and-resubmit); lead fields backfilled at `POST /api/lead` (`update_lead_info()`), with a fallback retry if the initial capture never landed. Live-verified end-to-end on Ben's own machine 2026-08-28 (real Google Sheets credentials, all three paths -- append, lead backfill, revise-and-resubmit update-in-place -- nominal); one real bug caught and fixed in the process (Windows lacks a built-in tz database, see CLAUDE_problems.md P042). Committed and pushed by Ben from his own machine -- `fbe0958`. See Q2 below and CLAUDE.md Key Decisions Log for the full schema and architecture. Deliberately not carried forward from the old module: notification-email-on-append (out of scope per Ben; revisit against `emailer.py` once Q3 is confirmed). |
+| 11 | Workbook lifecycle setup | Pending |
+| 12 | QA and delivery | Pending |
+
+---
+
+## Open Items
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | ~~Ben needs to commit the Phase 0 scaffold changes from his own machine~~ | **RESOLVED 2026-08-27 01:35 EDT.** Ben committed and pushed from his own machine -- `c4996eb`, clean diff (16 files, 38 insertions, 35 deletions), no line-ending pollution. Confirms the CRLF issue seen in this session's shell was purely a comparison artifact, not real file corruption. |
+| 2 | No PPTX report template in the project folder. Phase 5/9 cannot start until one exists. | OPEN |
+| 3 | ~~`check_files.sh` / `check_structure.py` (the mandated post-write verification scripts) hardcode file paths from a prior project (`itsmbvf`/ITSMweb), not this project.~~ | **RESOLVED 2026-08-26/27.** All five scripts (`check_files.sh`, `check_structure.py`, `check_css.py`, `check_js.py`, `check_routes.py`) rewritten for this project's real structure: 3 templates (`app/templates/pmtc/{profile,assessment,results}.html`, each self-contained, no shared base.html) and 5 modules (`app/blueprints/pmtc/{routes,calculator,data_capture,emailer,report}.py`). `check_css.py`/`check_js.py` redesigned per-file (no shared base.html to check coverage against). `check_routes.py` rewritten around the real session model (`profile`/`goals`/`ratings`/`results`) and `run_calculation()` signature. Ran clean end-to-end (`bash check_files.sh` exits 0); fresh `.check_baseline.json` generated. Not yet committed -- Ben to commit from his own machine, `.check_baseline.json` included. |
+| 4 | ~~Routing plan for Phase 2 needs Ben's confirmation~~ | **RESOLVED 2026-08-27.** Ben confirmed ("routing plan looks good"); built as Phases 2/3/4 this session. |
+| 6 | ~~This session did not commit its Phase 2/3/4 work~~ | **RESOLVED 2026-08-27.** Ben committed and pushed from his own machine -- `4a71a69` (13 files changed, 3179 insertions, 627 deletions). Hit a stale `.git/index.lock` from this session's earlier git commands first; removed it, then the commit/push went through clean. |
+| 7 | Q1 (hosting) and Q3 (email delivery) still unconfirmed defaults. Q2 (data capture) is resolved -- see Q2 below. `POST /api/lead` now writes real lead data (Google Sheets), but the report-email-delivery half of that flow (actually sending a report) is still a no-op pending Q3. | OPEN (Q1, Q3 only) |
+| 5 | This session's bridged shell's local git is unreliable beyond read-only commands -- after Ben's commit/push, a `git log` here triggered "unable to unlink .git/index.lock: Operation not permitted," and `git status` afterward showed every file as modified again (stale/permission-locked index, not a real state problem -- the commit itself is confirmed good both by Ben's terminal output and by `git log` showing `c4996eb` present). This is exactly the failure mode STANDING_RULES.md's git section warns about. Standing practice going forward: read-only git commands only from this session (`git log`, `git show`); all `add`/`commit`/`push` from Ben's machine. | Noted, not blocking -- informational |
+| 8 | The `itsmbvf@gmail.com` personal-Gmail workaround for the PMTC Google Cloud service account (used to bypass the geniusdrive.com org's `iam.disableServiceAccountKeyCreation` policy -- see Q2/CLAUDE.md Key Decisions Log) is not a scalable pattern across future client projects: it scatters unrelated clients' credentials under an ad-hoc personal account named for a different client, has no organizational governance (no central audit trail, no clean offboarding), and is a single point of failure -- if that one personal account is ever locked or lost, every project riding on it breaks at once. Two real fixes discussed, neither actioned: (1) get an `iam.disableServiceAccountKeyCreation` exception on the actual geniusdrive.com org, ideally at a GCP resource-hierarchy folder level (a dedicated "client projects" folder) so future projects inherit it automatically rather than repeating this workaround; (2) skip downloadable service-account keys entirely via GCP Workload Identity Federation with AWS as the external identity provider -- since PMTC (and future client tools) will run on AWS with its own IAM role, that role could impersonate the GCP service account with no long-lived key stored anywhere, which also sidesteps the org policy rather than routing around it. Not blocking PMTC today -- current setup (`itsmbvf@gmail.com`-owned service account) is built, tested, and working; this is a forward-looking process/governance question for Ben to decide on his own timeline, not a PMTC-specific defect. | OPEN -- forward-looking, not blocking |
+| 9 | `infra/` (the CDK deploy code) was untracked in any git repo -- only `app/` was. Folded into the same repo as `app/` by relocating `.git` up one level (Ben authorized: "Yes, proceed with your clean fix"). Caught and fixed a secret-leak risk first: `infra/` had no `.gitignore`, and `infra/cdk.json` holds real deploy secrets -- see CLAUDE_problems.md P046. Relocation verified clean (all real `app/` files show as renames, not delete+recreate; `cdk.json`/`node_modules/`/`cdk.out/` correctly excluded from staging). Nothing committed yet -- Ben needs to run `git add -A` / `git commit` / `git push` himself from his own machine per P033. | OPEN -- awaiting Ben's commit |
+
+---
+
+## Scoping Decisions
+
+| # | Question | Status | Decision |
+|---|----------|--------|----------|
+| Q1 | Hosting platform | **RESOLVED 2026-08-28 -- AWS Lambda** | Ben confirmed AWS Lambda as the specific deploy path (narrowing the earlier "AWS, service TBD" call). Flask cannot run on Lambda unmodified -- needs an ASGI/WSGI-to-Lambda adapter (e.g. `awslambdaric` + a WSGI shim, or Zappa/Mangum-style wrapper) and a Lambda Function URL or API Gateway in front of it; the AWS handoff kit's `StaticSiteStack` (S3+CloudFront) does not apply to this app and CloudFront would be kept, if at all, only for a custom-domain cert. Not yet built -- Phase 8 still Pending. See CLAUDE.md Key Decisions Log. |
+| Q2 | Data capture | **RESOLVED 2026-08-28** | Google Sheets, confirmed and built. Ben set up the target Sheet himself and defined the exact schema in the workbook (`NR!G2:AM3`, mirrored 1:1 onto Sheet columns A:AG with a fixed 6-column offset, data starting row 4). `data_capture.py` rewritten to match exactly -- see CLAUDE.md Key Decisions Log for the full column mapping and the append/update architecture. |
+| Q3 | Email delivery | DEFAULT (unconfirmed) | Defaulting to Gmail SMTP (`modules/email_gmail_smtp.md`); not yet explicitly confirmed |
+| Q4 | Authentication | **RESOLVED** | Ben confirmed: no login for this tool. Auth0 scaffold removed entirely (2026-08-26/27) rather than left disabled -- see Phase 7 row and CLAUDE.md Key Decisions Log. |
+| Q5 | Calc engine tier (1/2/3) | **RESOLVED** | Tier 1 -- hand-port to Python. See CLAUDE.md Key Decisions Log. |
+| Q6 | Chart approach for PPT (flattened image vs. native shapes) | OPEN -- moot until Phase 5 unblocks | N/A yet |
+
+---
+
+## Key Decisions Log
+
+See `CLAUDE.md` Key Decisions Log for the full write-up of each. Summary:
+
+- Tier 1 calc engine (2026-08-26)
+- 10 active capability dimensions, confirmed via workbook-wide red-fill audit (2026-08-26/27)
+- 6 active goals, same red-fill convention (2026-08-26/27)
+- None = literal 0, no N/A concept -- resolves `OPEN_QUESTIONS.md` entirely (2026-08-27)
+- Peer comparison data is seed/placeholder, implement as-is (2026-08-27)
+- Total-score and peer-score averages re-derived in Python, not copied verbatim from the workbook's own (stale, 12-row) formulas (2026-08-27)
+- PPTX report phase deferred until a template exists (2026-08-26)
+- Phase 2 will not reuse the starter's ITSM-shaped routes/templates as-is -- this project's real flow (3 pages, no investment model) needs its own routing plan (2026-08-27, pending Ben's confirmation)
+- No authentication -- Auth0 scaffold removed from the codebase entirely, not just left disabled (2026-08-26/27)
+- PMTC migrated to its own dedicated repo (`k1x-pmtc-assessment`) -- discovered while fixing Open Item #3 that step 3 of README_first.md ("create a new GitHub repo for this project") had been skipped, and every PMTC commit had been landing directly on the shared `web-project-starter` repo's main branch. Full history preserved (pushed to the new repo, plus a safety tag on the old one before reset). `web-project-starter` reset back to its last generic commit. (2026-08-26/27)
+
+---
+
+## Authoritative Source Registry
+
+| Timestamp (ET) | Commit / Reload | Description |
+|----------------|------------------|-------------|
+| 2026-08-26 20:04 EDT | -- (no repo yet) | Workbook read and fully tiered; CLAUDE.md and this file filled from live workbook + wireframe + Ben's decisions. No code exists yet. |
+| 2026-08-27 01:35 EDT | `c4996eb` | Phase 0 scaffold committed and pushed by Ben from his own machine: blueprint renamed to `pmtc`, `WORKBOOK.xlsx` added, `.env` created locally (not committed, gitignored). |
+| 2026-08-27 02:25 EDT | `4a71a69` | Phases 2-4 committed and pushed by Ben from his own machine: `calculator.py`/`routes.py` rewritten, `profile.html`/`assessment.html`/`results.html` ported from the wireframe, `picture1.png` moved to `app/static/pmtc/`, 7 stale starter templates deleted. |
+| 2026-08-26 22:33 EDT | `6dd77e6` | Phase 7 (auth removal) committed and pushed by Ben from his own machine: `app/auth.py` deleted, `app/__init__.py`/`requirements.txt`/`.env.example` stripped of Auth0 wiring (4 files changed, 33 deletions). `PROJECT_STATE.md`/`CLAUDE.md`/`SESSION_LOG.md` are outside this git repo (repo root is `Application/app/`, these live in the parent `Application/` folder) -- not committed, updated directly on disk. |
+| 2026-08-26 22:44 EDT | `6990428` | Open Item #3 (check_files.sh suite rewrite) committed and pushed by Ben from his own machine: `check_files.sh`/`check_structure.py`/`check_css.py`/`check_js.py`/`check_routes.py` rewritten for this project's real structure, `.check_baseline.json` added (6 files changed, 268 insertions, 239 deletions). |
+| 2026-08-27 EDT | `29c1c7c` | Results-page stat-tile update ported from wireframe `DESIGN_DECISIONS.md` §43/§44 (real sourced figures replacing placeholders, plus an inert internal sourcing JSON block), committed and pushed by Ben from his own machine (1 file changed, 63 insertions, 9 deletions). |
+| 2026-08-27 22:10 EDT | `4109fea` | `calculator.py`'s `ARCHETYPE_BANDS` updated to 5 bands (added the new score-0 "Stuck in the Blocks" band, dropped the now-unneeded clamp) and given real per-archetype narrative text ported verbatim from the updated `K1x PMTC Assessment.xlsx` (`Data!B100:E104`) and cross-verified against wireframe `results.html`'s inert `archetype-reference-data` JSON block (`DESIGN_DECISIONS.md` §45). `ARCHETYPE_NARRATIVE_PLACEHOLDER` (lorem ipsum) removed. Verified byte-for-byte against the workbook and with a direct module-level sanity run (`run_calculation()` at score 0 and score 5) before commit. Committed and pushed by Ben from his own machine (1 file changed, 40 insertions, 21 deletions). |
+| 2026-08-28 01:15 EDT | `fbe0958` | Phase 10 data capture committed and pushed by Ben from his own machine: `data_capture.py`/`routes.py` (schema/wiring) plus `requirements.txt` (`tzdata==2024.1` added, fixing the Windows `zoneinfo` crash found during live testing -- see CLAUDE_problems.md P042). 3 files changed, 192 insertions, 136 deletions. Confirmed via Ben's terminal output (`4109fea..fbe0958 main -> main`). Preceded by a full live end-to-end test on Ben's machine against real Google Sheets credentials -- all three data-capture paths (append, lead backfill, revise-and-resubmit update-in-place) confirmed nominal. |
+
+**Repo:** As of 2026-08-26/27, PMTC has its own dedicated repo -- `https://github.com/bspinsky-sketch/k1x-pmtc-assessment` -- migrated off the shared `web-project-starter` repo, which was reset back to a clean generic scaffold (see Key Decisions Log). `app/`'s `origin` remote now points at `k1x-pmtc-assessment`.
+**Current authoritative Git commit:** `fbe0958` ("Build and verify Google Sheets data capture for PMTC assessment (Phase 10); add tzdata for Windows zoneinfo support") -- Phase 10 fully committed, pushed, and live-verified. No uncommitted changes.
+**Current live workbook version:** `K1x PMTC Assessment.xlsx`, updated a third time on Ben's machine 2026-08-27/28: `NR!G2:AM3` simplified to Ben's final 33-column schema (dropped duplicate goal-priority text columns, capability order now matches `calculator.py`'s own order), and `Results!B4`'s stale "12 capabilities" text fixed to "10" as Ben said he would. Read and diffed against the repo's `app/WORKBOOK.xlsx` copy this session; the repo copy still reflects the 2026-08-26 version and has not been refreshed. `K1x PMTC Assessment OLD1.xlsx` in the project root is superseded -- do not use.
