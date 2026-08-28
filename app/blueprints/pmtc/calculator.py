@@ -145,29 +145,48 @@ PEER_COUNTS = {
     "Tax Exempt / Non-Profit": 111,
 }
 
-# Archetype bands (Data!B99:D103), matched with an approximate-match
+# Archetype bands (Data!B100:E104), matched with an approximate-match
 # VLOOKUP against the 0-5 "Your Score" average: the band whose threshold is
-# the largest value <= the score. The workbook has no band below a score of
-# 1 (VLOOKUP returns #N/A, wrapped in IFERROR to blank) — this port clamps
-# scores below 1 up to band 1 rather than showing a blank result.
+# the largest value <= the score. Band 0 ("Stuck in the Blocks") now covers
+# the full 0-5 range with no gap below it, so no clamping is needed here --
+# this exactly matches the workbook's VLOOKUP(...,TRUE) behavior for every
+# real score. Narrative copy is the real per-archetype text written into the
+# workbook and carried into results.html's inert archetype-reference-data
+# block (wireframe DESIGN_DECISIONS.md §45); ported here verbatim now that
+# this function does the score-based band selection that block's own
+# comment flagged as not yet built.
 ARCHETYPE_BANDS = [
-    {"min": 1, "name": "Automating the Foundation", "subtitle": "(Value is at Risk)"},
-    {"min": 2, "name": "Standardizing and Scaling", "subtitle": "(Value is Protected)"},
-    {"min": 3, "name": "Transforming the Workflow", "subtitle": "(Value is Accelerating)"},
-    {"min": 4, "name": "Optimizing Capabilities", "subtitle": "(Value is Compounding)"},
+    {
+        "min": 0,
+        "name": "Stuck in the Blocks",
+        "subtitle": "(Value is Unrealized)",
+        "narrative": "Nothing here is measured, so nothing here can be improved. Work moves by memory and habit rather than process, whether it's K-1s, other tax filings, or the reporting layered on top of them. Automation hasn't been tried yet, so there's no baseline to compare against and no case yet made for change.",
+    },
+    {
+        "min": 1,
+        "name": "Automating the Foundation",
+        "subtitle": "(Value is at Risk)",
+        "narrative": "The basics are in place, but they still run on manual effort. Collection, entry, and review depend on specific people doing specific things by hand, across K-1s and the other filings that share the same season. That's fragile: a busy week, a departure, or a missed handoff is enough to put accuracy or a deadline at risk.",
+    },
+    {
+        "min": 2,
+        "name": "Standardizing and Scaling",
+        "subtitle": "(Value is Protected)",
+        "narrative": "Process now exists where habit used to run things, with checklists and defined steps covering K-1s and adjacent tax work alike. That structure protects accuracy and makes the busy season repeatable rather than reinvented each year. The ceiling is effort, though: doing more still means adding people, not leverage.",
+    },
+    {
+        "min": 3,
+        "name": "Transforming the Workflow",
+        "subtitle": "(Value is Accelerating)",
+        "narrative": "Automation is doing real work now, not just supporting it, and the effect compounds across whatever tax and compliance tasks run through it. Cycle time keeps shrinking as fewer steps need a person, and the team is starting to spend time on judgment instead of entry. Confidence in the numbers is rising along with the speed.",
+    },
+    {
+        "min": 4,
+        "name": "Optimizing Capabilities",
+        "subtitle": "(Value is Compounding)",
+        "narrative": "Data flows on its own, and the team's attention has shifted from producing it to using it, across K-1s, other filings, and whatever comes next. Each season builds on the last instead of starting over, and the operation runs on evidence rather than heroics. That headroom is what turns compliance work into an advisory practice.",
+    },
 ]
-
-# "What This Means" narrative (ysc-narrative-body). The workbook has no
-# named range or authored copy for this block — it is lorem ipsum in the
-# approved wireframe (results.html) for every archetype. Carried through
-# verbatim rather than inventing marketing copy Ben hasn't reviewed; swap
-# in real per-archetype copy once it exists.
-ARCHETYPE_NARRATIVE_PLACEHOLDER = (
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod "
-    "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud "
-    "exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in "
-    "reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
-)
 
 # Maturity-curve "Recommended" mark (assets/DESIGN_DECISIONS.md §34; see the
 # curve script in results.html) is a fixed target, not computed from input.
@@ -248,7 +267,7 @@ def run_calculation(company, industry, goals, ratings):
         "peer_count": peer_count,
         "band_name": band["name"],
         "band_subtitle": band["subtitle"],
-        "narrative": ARCHETYPE_NARRATIVE_PLACEHOLDER,
+        "narrative": band["narrative"],
         "strengths": strengths,
         "gaps": gaps,
         "bar_rows": bar_rows,
