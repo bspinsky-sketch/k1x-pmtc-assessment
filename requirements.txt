@@ -8,3 +8,4 @@ gspread==6.1.2
 google-auth==2.29.0
 matplotlib>=3.9.2
 Flask-Session==0.8.0
+tzdata==2024.1

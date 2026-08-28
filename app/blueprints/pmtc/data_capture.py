@@ -1,44 +1,99 @@
 """
-Data capture module for the ITSM Business Value Framework.
+Data capture module for the K1x PMTC Assessment.
 
-Appends one row per session to a Google Sheet dashboard, and sends a
-notification email to the configured admin address on every append.
+Appends one row per completed assessment to a Google Sheet, and backfills
+lead info into that same row if the "Get My Report" modal is submitted.
+
+Trigger points (see routes.py):
+  - POST /assessment  -- the moment results are computed, calls
+    capture_result(). First time in a session: appends a new row and the
+    caller stores the returned row number as session['capture_row']. If the
+    user goes back, revises an answer, and resubmits (capture_row already
+    set): updates that same row's assessment columns in place rather than
+    appending a second row, so one browser session never produces more than
+    one row.
+  - POST /api/lead -- calls update_lead_info() to backfill First Name/Last
+    Name/Email/Opt-In into the row identified by session['capture_row'].
+    Defensive fallback in routes.py: if capture_row was never set (e.g.
+    Sheets was unreachable at assessment time), routes.py retries
+    capture_result() once before calling update_lead_info().
+
+Sheet layout (Ben's own Google Sheet, set up and header-labeled already --
+this module never writes headers). Source: K1x PMTC Assessment.xlsx,
+NR!G2:AM3. Workbook column G ("Friendly name", label only) is Sheet column
+A -- a fixed offset of 6 for every column after that. Data starts at row 4;
+column A is never touched by this module.
+
+  Sheet col | Workbook col | Field                          | Source
+  ----------|--------------|--------------------------------|------------------------------
+  B         | H            | Timestamp (ET, write-time)     | -- (generated here, not a named range)
+  C         | I            | Company                        | Company
+  D         | J            | Industry                       | Industry
+  E         | K            | Goal 1 (Reduce Cycle Time)      | GW_1
+  F         | L            | Goal 2 (Centralize/Standardize) | GW_2
+  G         | M            | Goal 5 (Support Scalable Growth)| GW_5
+  H         | N            | Goal 6 (Improve Accuracy)       | GW_6
+  I         | O            | Goal 7 (Elevate Client Exp.)    | GW_7
+  J         | P            | Goal 9 (Advisory/Decision Supp.)| GW_9
+  K-T       | Q-Z          | Assessed capability 1-10        | Assess_*_lvl (calculator.py order)
+  U         | AA           | Your score                      | R_youScore
+  V         | AB           | Peer score                      | R_peerScore
+  W         | AC           | Number of peers compared against| R_peerCount
+  X-Z       | AD-AF        | Results top capability 1-3      | R_strengthRank1-3
+  AA-AC     | AG-AI        | Results GAP capability 1-3      | R_gapRank1-3
+  AD        | AJ           | First Name                      | FirstName (blank until modal)
+  AE        | AK           | Last Name                       | LastName (blank until modal)
+  AF        | AL           | Email address                   | Email (blank until modal)
+  AG        | AM           | Opt-In                          | OptIn (blank until modal)
 
 Credentials read from environment:
   GOOGLE_CREDENTIALS_JSON  -- full service-account JSON as a single-line string
   GOOGLE_SHEET_ID          -- the Sheet ID from the URL
-  GMAIL_ADDRESS            -- sender/notification recipient (itsmbvf@gmail.com)
-  GMAIL_APP_PASSWORD       -- Gmail App Password
 
-Schema (columns A-U):
-  timestamp, company_name, revenue_M, employees, it_headcount,
-  ch1..ch7 (H/M/L/N), roi_x, payback_mo, benefit_3y, npv,
-  irr_pct, avg_annual_benefit, codn_mo, ftes_saved, email
+Deliberately out of scope for this pass (per Ben, "not the data capture
+[email] yet"): no notification email on append -- the old ITSM module's
+send_capture_notification() has no PMTC equivalent here. Add one against
+emailer.py once Q3 (email delivery) is confirmed, if wanted.
 """
 
 import json
 import logging
 import os
-import smtplib
-from datetime import datetime, timezone
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger(__name__)
 
-# Sheet column headers -- must match append_session() row order exactly.
-HEADERS = [
-    'timestamp', 'company_name', 'revenue_M', 'employees', 'it_headcount',
-    'ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7',
-    'roi_x', 'payback_mo', 'benefit_3y', 'npv', 'irr_pct',
-    'avg_annual_benefit', 'codn_mo', 'ftes_saved', 'email',
+EASTERN = ZoneInfo("America/New_York")
+
+DATA_START_ROW = 4      # first row of pushed data -- rows 1-3 are title/headers, already set up
+FIRST_DATA_COL = "B"    # column A ("Friendly name") is manually maintained, never written here
+LAST_ASSESSMENT_COL = "AC"  # last assessment-portion column (Results GAP capability 3)
+LAST_DATA_COL = "AG"        # last column overall (Opt-In)
+
+# Goal keys in the exact order the sheet expects (E:J) -- must match
+# calculator.py's GOALS / GOAL_KEYS order exactly.
+GOAL_KEYS_ORDER = [
+    "reduce_time", "standardize", "scalable_growth",
+    "accuracy", "client_experience", "advisory_services",
+]
+
+# Capability keys in the exact order the sheet expects (K:T) -- must match
+# calculator.py's CAPABILITIES / CAPABILITY_KEYS order exactly.
+CAPABILITY_KEYS_ORDER = [
+    "document_intake", "inventory_management", "data_extraction",
+    "data_validation", "data_review", "tax_analysis_reporting",
+    "integration", "resource_structure", "advisory", "governance_trust",
 ]
 
 _gc = None  # module-level gspread client (lazy init)
 
 
 def _get_sheet():
-    """Return the first sheet of the dashboard workbook (lazy init)."""
+    """Return the target worksheet (lazy init). Returns None if Sheets
+    isn't configured or the connection fails -- callers must handle that
+    as "capture skipped," never as an error to surface to the user."""
     global _gc
     try:
         import gspread
@@ -64,132 +119,101 @@ def _get_sheet():
         return None
 
 
-def _ensure_headers(sheet):
-    """Add header row if the sheet is empty."""
-    try:
-        if sheet.row_count == 0 or not sheet.row_values(1):
-            sheet.append_row(HEADERS, value_input_option='RAW')
-    except Exception as exc:
-        log.warning('data_capture: could not write headers: %s', exc)
+def _assessment_row_values(company, industry, goals, results):
+    """Build the B:AG row for the assessment portion of the schema (28
+    values covering B:AC). Columns AD:AG (the lead fields) are appended as
+    4 blank placeholders -- update_lead_info() fills those in separately."""
+    now_et = datetime.now(EASTERN).strftime('%Y-%m-%d %H:%M:%S')
+
+    goal_scores = [goals.get(key, 0) for key in GOAL_KEYS_ORDER]
+    capability_scores = results.get('capability_scores', {})
+    capability_levels = [capability_scores.get(key, 0) for key in CAPABILITY_KEYS_ORDER]
+
+    strengths = results.get('strengths', [])
+    gaps = results.get('gaps', [])
+    strength_names = [s.get('name', '') for s in strengths[:3]] + [''] * (3 - len(strengths[:3]))
+    gap_names = [g.get('name', '') for g in gaps[:3]] + [''] * (3 - len(gaps[:3]))
+
+    return [
+        now_et,
+        company,
+        industry,
+        *goal_scores,
+        *capability_levels,
+        results.get('your_score', ''),
+        results.get('peer_score', ''),
+        results.get('peer_count', ''),
+        *strength_names,
+        *gap_names,
+        '', '', '', '',  # First Name, Last Name, Email, Opt-In -- filled later
+    ]
 
 
-def append_session(profile, priorities, kpis, ftes_saved=None, email=None):
+def capture_result(company, industry, goals, results, row_number=None):
     """
-    Append one row to the dashboard sheet.
+    Write the assessment portion of one row (Timestamp through Results GAP
+    capability 3, columns B:AC) to the Sheet.
 
-    Returns the 1-based row number of the appended row, or None on failure.
-    Never raises -- all errors are logged and swallowed so the user flow is unaffected.
+    row_number=None: appends a new row (first time this session reaches
+    Results) and returns the new row's 1-based row number.
+    row_number=<int>: updates that row's assessment columns in place
+    instead of appending -- the revise-and-resubmit case -- and returns the
+    same row number back.
+
+    Returns the row number on success, or None on failure. Never raises --
+    errors are logged and swallowed so the user flow is unaffected.
     """
     sheet = _get_sheet()
     if sheet is None:
-        log.info('data_capture: Google Sheets not configured -- skipping append')
+        log.info('data_capture: Google Sheets not configured -- skipping capture')
         return None
+
+    row = _assessment_row_values(company, industry, goals, results)
+    assessment_only = row[:-4]  # drop the 4 blank lead placeholders for an in-place update
 
     try:
-        _ensure_headers(sheet)
+        if row_number:
+            sheet.update(
+                f'{FIRST_DATA_COL}{row_number}:{LAST_ASSESSMENT_COL}{row_number}',
+                [assessment_only], value_input_option='USER_ENTERED',
+            )
+            return row_number
 
-        raw = kpis.get('raw', {})
-
-        row = [
-            datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),
-            profile.get('company_name', ''),
-            profile.get('revenue_millions', ''),
-            profile.get('employees', ''),
-            profile.get('it_headcount', ''),
-            priorities.get('challenge_1', 'None'),
-            priorities.get('challenge_2', 'None'),
-            priorities.get('challenge_3', 'None'),
-            priorities.get('challenge_4', 'None'),
-            priorities.get('challenge_5', 'None'),
-            priorities.get('challenge_6', 'None'),
-            priorities.get('challenge_7', 'None'),
-            _fmt_raw(raw.get('roi')),
-            _fmt_raw(raw.get('payback')),
-            _fmt_raw(raw.get('benefit_3y')),
-            _fmt_raw(raw.get('npv')),
-            _fmt_raw(raw.get('irr') * 100 if raw.get('irr') is not None else None),
-            _fmt_raw(raw.get('benefit_ann_avg')),
-            _fmt_raw(raw.get('codn_mo')),
-            str(ftes_saved) if ftes_saved is not None else '',
-            email or '',
-        ]
-
-        sheet.append_row(row, value_input_option='USER_ENTERED')
-
-        # Row number: headers in row 1, so appended row = current count
-        return len(sheet.get_all_values())
+        resp = sheet.append_row(
+            row, value_input_option='USER_ENTERED',
+            table_range=f'{FIRST_DATA_COL}{DATA_START_ROW}:{LAST_DATA_COL}{DATA_START_ROW}',
+        )
+        updated_range = resp.get('updates', {}).get('updatedRange', '')
+        match = re.search(r'(\d+)(?::|$)', updated_range.split('!')[-1])
+        return int(match.group(1)) if match else None
 
     except Exception as exc:
-        log.warning('data_capture: append failed: %s', exc)
+        log.warning('data_capture: capture_result failed: %s', exc)
         return None
 
 
-def update_email(row_number, email):
+def update_lead_info(row_number, first_name, last_name, email, opt_in):
     """
-    Write the user's email into column U (index 21) of an existing row.
-    Silent on failure.
+    Backfill the lead columns (AD:AG -- First Name, Last Name, Email,
+    Opt-In) into an existing row.
+
+    If row_number is falsy, does nothing and logs -- the caller (routes.py)
+    is responsible for attempting a fresh capture_result() first in that
+    case, not this function.
+
+    Silent on failure -- never raises.
     """
-    if not row_number or not email:
+    if not row_number:
+        log.info('data_capture: no capture_row to update lead info into -- skipping')
         return
     sheet = _get_sheet()
     if sheet is None:
         return
     try:
-        sheet.update_cell(row_number, 21, email)  # column U = 21
+        sheet.update(
+            f'AD{row_number}:AG{row_number}',
+            [[first_name, last_name, email, 'Yes' if opt_in else 'No']],
+            value_input_option='USER_ENTERED',
+        )
     except Exception as exc:
-        log.warning('data_capture: update_email failed (row %s): %s', row_number, exc)
-
-
-def send_capture_notification(profile, kpis, email=None):
-    """
-    Send a brief notification email to the admin address (GMAIL_ADDRESS).
-    Silent on failure.
-    """
-    gmail_address  = os.environ.get('GMAIL_ADDRESS', '').strip()
-    gmail_password = os.environ.get('GMAIL_APP_PASSWORD', '').strip()
-    if not gmail_address or not gmail_password:
-        return
-
-    try:
-        company = profile.get('company_name', 'Unknown')
-        if email:
-            subject = f'[ITSMweb] Report requested -- {company}'
-            note    = f'<p>Email address provided: <strong>{email}</strong></p>'
-        else:
-            subject = f'[ITSMweb] New session completed -- {company}'
-            note    = '<p>No report requested.</p>'
-
-        body = f"""\
-<p><strong>Company:</strong> {company}</p>
-<p><strong>Revenue:</strong> ${profile.get("revenue_millions", "?")}M &nbsp;
-   <strong>Employees:</strong> {profile.get("employees", "?")}</p>
-{note}
-<p><strong>Results:</strong><br>
-ROI: {kpis.get("roi", "?")} &nbsp;|&nbsp;
-Payback: {kpis.get("payback", "?")} &nbsp;|&nbsp;
-3-yr benefits: {kpis.get("benefit_3y", "?")} &nbsp;|&nbsp;
-IRR: {kpis.get("irr", "?")}
-</p>
-"""
-        msg = MIMEMultipart()
-        msg['From']    = gmail_address
-        msg['To']      = gmail_address   # notify the admin address
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'html'))
-
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(gmail_address, gmail_password)
-            server.send_message(msg)
-
-    except Exception as exc:
-        log.warning('data_capture: notification email failed: %s', exc)
-
-
-def _fmt_raw(value):
-    """Round a float to 2 decimal places for sheet storage, or return empty string."""
-    if value is None:
-        return ''
-    try:
-        return round(float(value), 2)
-    except (TypeError, ValueError):
-        return ''
+        log.warning('data_capture: update_lead_info failed (row %s): %s', row_number, exc)

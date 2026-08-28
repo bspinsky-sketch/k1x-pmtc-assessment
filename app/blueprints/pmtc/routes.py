@@ -12,6 +12,7 @@ from app.blueprints.pmtc import bp
 from app.blueprints.pmtc.calculator import (
     run_calculation, GOAL_KEYS, CAPABILITY_KEYS, INDUSTRIES,
 )
+from app.blueprints.pmtc import data_capture
 
 
 def _int_or_zero(value):
@@ -93,6 +94,20 @@ def assessment_submit():
     profile = session['profile']
     goals = session.get('goals', {key: 0 for key in GOAL_KEYS})
     session['results'] = run_calculation(profile['company'], profile['industry'], goals, ratings)
+
+    # Data capture (Phase 10): write/update the assessment portion of this
+    # session's Sheet row. First time through, row_number is None and
+    # capture_result() appends a new row; if the user later goes back,
+    # revises an answer, and resubmits, capture_row is already set and this
+    # updates that same row's assessment columns in place rather than
+    # appending a second one -- see data_capture.py's module docstring.
+    row_number = data_capture.capture_result(
+        profile['company'], profile['industry'], goals, session['results'],
+        row_number=session.get('capture_row'),
+    )
+    if row_number:
+        session['capture_row'] = row_number
+
     session.modified = True
     return redirect(url_for('pmtc.results_page'))
 
@@ -110,21 +125,37 @@ def results_page():
 # ---------------------------------------------------------------------------
 # Lead capture (the Results page's "Get My Report" modal)
 # ---------------------------------------------------------------------------
-# Best-effort stub: accepts the submission and returns success so the modal
-# always shows its confirmation state, but does not yet persist the lead
-# anywhere. The data-capture method (Google Sheets vs. something else) and
-# the report-email delivery method are both unconfirmed defaults in
-# PROJECT_STATE.md (Q2/Q3) -- wire this up to app/blueprints/pmtc/data_capture.py
-# and emailer.py once Ben confirms those.
+# Backfills First Name/Last Name/Email/Opt-In into the Sheet row this
+# session already wrote at assessment-submit time (session['capture_row']).
+# Defensive fallback: if capture_row was never set (e.g. Sheets was
+# unreachable when the assessment was submitted), retry capture_result()
+# once here so the lead isn't silently lost, before writing the lead
+# columns into whatever row that produces.
 @bp.route('/api/lead', methods=['POST'])
 def lead_capture():
     data = request.get_json(silent=True) or {}
-    session['lead'] = {
+    lead = {
         'first_name': data.get('first_name', ''),
         'last_name': data.get('last_name', ''),
         'company': data.get('company', ''),
         'email': data.get('email', ''),
         'opt_in': bool(data.get('opt_in')),
     }
+    session['lead'] = lead
     session.modified = True
+
+    row_number = session.get('capture_row')
+    if not row_number and 'profile' in session and 'results' in session:
+        profile = session['profile']
+        row_number = data_capture.capture_result(
+            profile['company'], profile['industry'],
+            session.get('goals', {}), session['results'],
+        )
+        if row_number:
+            session['capture_row'] = row_number
+            session.modified = True
+
+    data_capture.update_lead_info(
+        row_number, lead['first_name'], lead['last_name'], lead['email'], lead['opt_in'],
+    )
     return jsonify({'status': 'received'})
