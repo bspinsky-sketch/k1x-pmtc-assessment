@@ -40,6 +40,11 @@ def profile_page():
         'pmtc/profile.html',
         profile=session.get('profile'),
         goals=session.get('goals'),
+        # Lets the breadcrumb link forward to Results once it's already
+        # been computed (e.g. user came back to Profile via "Back" from
+        # Assessment/Results to tweak something, without losing the ability
+        # to jump straight back to Results if they don't actually resubmit).
+        results_done=bool(session.get('results')),
     )
 
 
@@ -87,7 +92,13 @@ def profile_submit():
 def assessment_page():
     if 'profile' not in session:
         return redirect(url_for('pmtc.profile_page'))
-    return render_template('pmtc/assessment.html', ratings=session.get('ratings'))
+    return render_template(
+        'pmtc/assessment.html',
+        ratings=session.get('ratings'),
+        # Same idea as profile_page(): breadcrumb should link forward to
+        # Results if they're already computed for this session.
+        results_done=bool(session.get('results')),
+    )
 
 
 @bp.route('/assessment', methods=['POST'])

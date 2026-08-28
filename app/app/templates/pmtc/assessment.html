@@ -314,7 +314,11 @@ a{color:inherit;}
       <span class="bc-sep">&rsaquo;</span>
       <span class="bc-step current">2 · Assessment</span>
       <span class="bc-sep">&rsaquo;</span>
+      {% if results_done %}
+      <a class="bc-step done bc-link" href="{{ url_for('pmtc.results_page') }}">3 · Results</a>
+      {% else %}
       <span class="bc-step">3 · Results</span>
+      {% endif %}
     </nav>
 
     <header class="page-header">

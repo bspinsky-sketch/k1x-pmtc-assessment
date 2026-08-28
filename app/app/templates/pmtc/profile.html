@@ -353,9 +353,17 @@ select.field-input{appearance:none;background-image:url("data:image/svg+xml,%3Cs
     <nav class="breadcrumb" aria-label="Progress">
       <span class="bc-step current">1 · Profile</span>
       <span class="bc-sep">&rsaquo;</span>
+      {% if profile %}
+      <a class="bc-step done bc-link" href="{{ url_for('pmtc.assessment_page') }}">2 · Assessment</a>
+      {% else %}
       <span class="bc-step">2 · Assessment</span>
+      {% endif %}
       <span class="bc-sep">&rsaquo;</span>
+      {% if results_done %}
+      <a class="bc-step done bc-link" href="{{ url_for('pmtc.results_page') }}">3 · Results</a>
+      {% else %}
       <span class="bc-step">3 · Results</span>
+      {% endif %}
     </nav>
 
     <header class="page-header">
