@@ -2,7 +2,15 @@
 
 **Purpose:** Authoritative project reference for Claude. Read at every session start before any substantive work.
 
-**Last updated:** 2026-08-28 13:05 EDT (new session, continued -- Lambda infra drafted and verified, not yet deployed)
+**Last updated:** 2026-08-28 17:15 EDT (custom domain live at `https://k1x-pmtc.geniusdrive.com/` -- CloudFront in front of the deployed Lambda Function URL, built on branch `klutetr/new-domain`, pending merge)
+
+> **NEW WORK LANDED FROM ANOTHER MACHINE -- READ `AFTER_YOU_PULL.md` FIRST.**
+> The tool now has a custom domain (`https://k1x-pmtc.geniusdrive.com/`), added
+> by Tristen on branch `klutetr/new-domain`. Nothing about the existing deploy
+> workflow changed, but there is one **launch-blocking app bug** described
+> there: the Flask session cookie has no `SameSite`/`Secure` set, so the tool's
+> session is dropped inside the K1x iframe embed and the wizard loses state.
+> `AFTER_YOU_PULL.md` has the exact fix. Delete this banner once it is done.
 
 ---
 
