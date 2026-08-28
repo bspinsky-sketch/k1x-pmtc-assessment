@@ -1,0 +1,53 @@
+{
+  "//": "Copy this file to cdk.json and fill in the values. cdk.json itself is gitignored: the app half of it holds real secrets (see infra/.gitignore and CLAUDE_problems.md P046). This example exists so that a fresh clone can run cdk at all -- cdk.json is also what tells the CDK CLI where the app entrypoint is, so without one, even `npx cdk synth` fails before reaching any of this project's code.",
+
+  "app": "npx tsx bin/app.ts",
+  "context": {
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true,
+    "@aws-cdk/core:enablePartitionLiterals": true,
+
+    "//bootstrapQualifier": "Deploys through the scoped tool0001 bootstrap, the same one the sibling SmomaSite/SmomaMail stacks use. The account default bootstrap (hnb659fds) runs as AdministratorAccess and is denied to this user. Do not change this.",
+    "@aws-cdk/core:bootstrapQualifier": "tool0001",
+
+    "//": "----- everything below is yours to set -----",
+
+    "//account": "The AWS account, written down rather than inherited from whichever profile is active.",
+    "account": "019163347448",
+
+    "//region": "Where the Lambda lives. The domain stack is always us-east-1 regardless, because CloudFront certificates have to be.",
+    "region": "us-east-1",
+
+    "//prefix": "Names the stacks: <prefix>App and <prefix>Domain.",
+    "prefix": "Pmtc",
+
+    "//flaskSecretKey": "Signs the Flask session cookie. Generate with: python3 -c \"import secrets; print(secrets.token_hex(32))\". Use a different value than your local .env. REAL SECRET -- never commit.",
+    "flaskSecretKey": "",
+
+    "//googleCredentialsJson": "The Google service-account key, full JSON as downloaded, collapsed to one line. Same value as your local .env's GOOGLE_CREDENTIALS_JSON. REAL SECRET -- never commit.",
+    "googleCredentialsJson": "",
+
+    "//googleSheetId": "The target Google Sheet ID. Same value as your local .env's GOOGLE_SHEET_ID. Not a secret, but it goes here with the others.",
+    "googleSheetId": "",
+
+    "//memoryMb": "Lambda memory. Empty means the default, 512.",
+    "memoryMb": "",
+
+    "//timeoutSeconds": "Lambda timeout. Empty means the default, 15.",
+    "timeoutSeconds": "",
+
+    "//appStackNote": "Leave flaskSecretKey/googleCredentialsJson/googleSheetId empty and PmtcApp is not created at all -- which is the point: the domain stack below can then be deployed from a machine that has none of the app's secrets, with no way to redeploy the live Lambda by accident.",
+
+    "//domain": "The subdomain the tool answers to. Hostname characters only -- letters, digits, hyphens. An underscore is rejected by both ACM and CloudFront.",
+    "domain": "k1x-pmtc.geniusdrive.com",
+
+    "//certArn": "An issued us-east-1 certificate for that domain, requested standalone with `aws acm request-certificate` rather than by CloudFormation. See domain-stack.ts for why.",
+    "certArn": "arn:aws:acm:us-east-1:019163347448:certificate/8472dbb9-d9b9-4a1a-b3f7-b63ca58e804c",
+
+    "//functionUrl": "The deployed PmtcApp stack's own AppUrl output, pasted in verbatim. Not a cross-stack reference, on purpose -- see bin/app.ts.",
+    "functionUrl": "https://ssida3ob72gzabi2ai5r6kqzle0ltmcp.lambda-url.us-east-1.on.aws/",
+
+    "//domainStackNote": "domain, certArn and functionUrl go together: set all three, or none. Setting some but not all fails at synth by design."
+  }
+}
