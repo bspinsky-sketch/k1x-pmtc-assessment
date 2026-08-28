@@ -51,10 +51,14 @@ a{color:inherit;}
 .ysc-ring{grid-column:1;grid-row:1;padding-top:14px;}
 .ysc-band{grid-column:2;grid-row:1;align-self:center;}
 .ysc-narrative{grid-column:3;grid-row:1 / 4;align-self:start;}
-/* the peer eyebrow spans both columns 1–2 as its own row so "Where Your Accounting Peer
-   Leaders Ranked" fits on one line (white-space:nowrap) rather than wrapping inside column
-   1's ~238px width. The divider that used to be a border-top rule on the score/note row is
-   gone — the eyebrow line itself now does that visual separation. padding-left:45px shifts
+/* the peer eyebrow spans both columns 1–2 as its own row so it has a full-width lane
+   to sit in rather than wrapping inside column 1's ~238px width alone. It wraps normally
+   (no white-space:nowrap) because some industry names ("Family Office / Wealth
+   Management") are long enough that forcing one line pushed the text past the
+   columns-1–2 boundary and under the narrative card's border/background — caught live
+   2026-08-28, see SESSION_LOG.md. The divider that used to be a border-top rule on the
+   score/note row is gone — the eyebrow line itself now does that visual separation.
+   padding-left:45px shifts
    the eyebrow's text to start under the ring's left edge specifically, rather than the
    column's own left edge — the ring is centered within column 1, so its left edge sits 45px
    in from where this row would otherwise start flush. That 45px is measured at the card's
@@ -65,8 +69,7 @@ a{color:inherit;}
    lines up. Peer score (col 1) and its note (col 2) sit in the row below, each set to
    align-self:center so "2.3" sits centered against the full height of the (possibly
    two-line) note beside it, rather than sharing a baseline with just its first line. */
-.ysc-peer-eyebrow-row{grid-column:1 / 3;grid-row:2;margin-top:24px;padding-left:45px;
-  white-space:nowrap;}
+.ysc-peer-eyebrow-row{grid-column:1 / 3;grid-row:2;margin-top:24px;padding-left:45px;}
 .ysc-peer{grid-column:1;grid-row:3;align-self:center;}
 .ysc-peer-note-col{grid-column:2;grid-row:3;align-items:flex-start;text-align:left;
   align-self:center;}

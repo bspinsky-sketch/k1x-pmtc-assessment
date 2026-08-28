@@ -69,7 +69,8 @@ both when a change is ready to keep the repo and the live tool in sync.
 - No email delivery (Q3 still open in PROJECT_STATE.md). A `MailStack`
   copied from `../../handoff/infra/lib/mail-stack.ts`, deployed as its own
   stack, is the natural next piece once that's decided.
-- Not yet actually deployed. `AppStack` synths clean and was verified with a
-  simulated Lambda invocation of the real Flask app locally (see
-  `lambda_handler.py`'s own docstring) -- but nobody has run `cdk deploy`
-  against the real AWS account yet. That's the next real step.
+- Deployed and live since 2026-08-28 (Function URL address, no custom
+  domain -- see "Deploy" above). This section originally described the
+  pre-deploy state and was stale; if you're reading this after a further
+  deploy, check `PROJECT_STATE.md`'s Authoritative Source Registry for the
+  current live commit rather than trusting this file's wording.
