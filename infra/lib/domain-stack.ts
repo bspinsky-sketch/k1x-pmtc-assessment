@@ -144,7 +144,7 @@ export class DomainStack extends Stack {
         // `EnableAcceptEncodingGzip` on any policy whose TTLs are all zero
         // ("The parameter EnableAcceptEncodingGzip is invalid for policy
         // with caching disabled" -- confirmed directly against the
-        // CreateCachePolicy API, see CLAUDE_problems.md P047).
+        // CreateCachePolicy API, see CLAUDE_problems.md P050).
         //
         // The tempting workaround is a 1-second MaxTTL, which makes the
         // policy legal and buys back compression. Rejected: `GET /` calls

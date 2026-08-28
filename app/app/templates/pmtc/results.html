@@ -48,13 +48,17 @@ a{color:inherit;}
   border-bottom:1px solid rgba(255,255,255,.14);}
 .ysc-col{display:flex;flex-direction:column;align-items:center;text-align:center;}
 .ysc-col.ysc-band,.ysc-col.ysc-narrative{align-items:flex-start;text-align:left;}
-.ysc-ring{grid-column:1;grid-row:1;}
+.ysc-ring{grid-column:1;grid-row:1;padding-top:14px;}
 .ysc-band{grid-column:2;grid-row:1;align-self:center;}
 .ysc-narrative{grid-column:3;grid-row:1 / 4;align-self:start;}
-/* the peer eyebrow spans both columns 1–2 as its own row so "Where Your Accounting Peer
-   Leaders Ranked" fits on one line (white-space:nowrap) rather than wrapping inside column
-   1's ~238px width. The divider that used to be a border-top rule on the score/note row is
-   gone — the eyebrow line itself now does that visual separation. padding-left:45px shifts
+/* the peer eyebrow spans both columns 1–2 as its own row so it has a full-width lane
+   to sit in rather than wrapping inside column 1's ~238px width alone. It wraps normally
+   (no white-space:nowrap) because some industry names ("Family Office / Wealth
+   Management") are long enough that forcing one line pushed the text past the
+   columns-1–2 boundary and under the narrative card's border/background — caught live
+   2026-08-28, see SESSION_LOG.md. The divider that used to be a border-top rule on the
+   score/note row is gone — the eyebrow line itself now does that visual separation.
+   padding-left:45px shifts
    the eyebrow's text to start under the ring's left edge specifically, rather than the
    column's own left edge — the ring is centered within column 1, so its left edge sits 45px
    in from where this row would otherwise start flush. That 45px is measured at the card's
@@ -65,8 +69,7 @@ a{color:inherit;}
    lines up. Peer score (col 1) and its note (col 2) sit in the row below, each set to
    align-self:center so "2.3" sits centered against the full height of the (possibly
    two-line) note beside it, rather than sharing a baseline with just its first line. */
-.ysc-peer-eyebrow-row{grid-column:1 / 3;grid-row:2;margin-top:24px;padding-left:45px;
-  white-space:nowrap;}
+.ysc-peer-eyebrow-row{grid-column:1 / 3;grid-row:2;margin-top:24px;padding-left:45px;}
 .ysc-peer{grid-column:1;grid-row:3;align-self:center;}
 .ysc-peer-note-col{grid-column:2;grid-row:3;align-items:flex-start;text-align:left;
   align-self:center;}
@@ -108,8 +111,21 @@ a{color:inherit;}
 .ysc-band-strong{font-weight:800;font-size:20px;line-height:1.25;color:#fff;margin-bottom:6px;}
 .ysc-band-sub{font-size:14px;color:var(--slate-light);}
 
-/* narrative */
-.ysc-narrative-body{font-size:13.5px;line-height:1.65;color:var(--slate-light);}
+/* narrative card -- matches .sg-col's own treatment (translucent scrim + rounded
+   corners) below, rather than a plain border, per Ben's 2026-08-28 design review. Padding-top
+   (14px) matches .ysc-ring's own padding-top above, so "What This Means" lines up with "Your
+   Score" instead of sitting lower -- do not vertically-center this card's content; that was
+   tried in the mockup and is exactly what threw the alignment off. min-height (not a hard
+   height + overflow:hidden) is deliberate: the app's 5 narrative bands are all close in
+   length (298-327 characters) and comfortably fit this height with room to spare, but a hard
+   cap would silently clip a future longer narrative instead of just growing the card a
+   little taller. */
+.narrative-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);
+  border-radius:16px;overflow:hidden;padding:14px 20px 22px;min-height:300px;}
+.narrative-card .ysc-eyebrow{margin-bottom:16px;}
+.ysc-narrative-body{font-size:17px;line-height:1.6;color:rgba(255,255,255,.92);}
+.ysc-narrative-body span{display:block;margin-bottom:14px;}
+.ysc-narrative-body span:last-child{margin-bottom:0;}
 
 /* maturity curve card — adapted from maturity-curve.html (see that file's README for the
    monotone-cubic path, curveAt(), and fit() rationale; not re-explained here). Trimmed to
@@ -128,9 +144,15 @@ a{color:inherit;}
 .curve-axis{stroke:rgba(255,255,255,.28);stroke-width:1;}
 .curve-line{stroke:var(--curve-cyan);stroke-width:var(--curve-stroke,4px);stroke-linecap:round;}
 .curve-tick line{stroke:rgba(255,255,255,.28);stroke-width:1;}
-.curve-tick-n{fill:rgba(255,255,255,.55);font-family:var(--font-mono);font-weight:500;
-  font-size:var(--curve-label,10px);letter-spacing:.02em;transform:translateY(1.9em);}
+/* Verbose stage name sits above the numeric level (translateY 1.9em, the upper line),
+   numeric below it in parentheses (translateY 3.15em) -- swapped from the original
+   numeric-above/name-below order per Ben's 2026-08-28 request. When the chart is too
+   narrow to show the verbose name ([data-ticks="bare"], name display:none below), the
+   numeric line reclaims the upper 1.9em position so it isn't left stranded with an empty
+   gap above it -- see the bare-ticks override further down. */
 .curve-tick-name{fill:rgba(255,255,255,.55);font-family:var(--font-mono);font-weight:500;
+  font-size:var(--curve-label,10px);letter-spacing:.02em;transform:translateY(1.9em);}
+.curve-tick-n{fill:rgba(255,255,255,.55);font-family:var(--font-mono);font-weight:500;
   font-size:var(--curve-label,10px);letter-spacing:.02em;transform:translateY(3.15em);}
 .curve-mark circle{fill:var(--signal);stroke:var(--navy-deep);
   r:var(--curve-dot,7px);stroke-width:var(--curve-stroke,4px);}
@@ -146,9 +168,10 @@ a{color:inherit;}
 @media screen{
   [data-marks="bare"] .curve-mark text{display:none;}
   [data-ticks="bare"] .curve-tick-name{display:none;}
+  [data-ticks="bare"] .curve-tick-n{transform:translateY(1.9em);}
 }
 .curve-cap{margin-top:14px;}
-.curve-marks{display:flex;flex-wrap:wrap;gap:10px 28px;margin:0;}
+.curve-marks{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin:0;}
 .curve-mark-key{display:flex;align-items:center;gap:8px;}
 .curve-mark-dot{width:9px;height:9px;border-radius:50%;background:var(--signal);}
 .curve-mark-dot[data-mark="target"]{background:var(--ink-deepest);border:2px solid var(--signal);}
@@ -165,14 +188,20 @@ a{color:inherit;}
    .results-band rather than on the page's plain --bone background. See DESIGN_DECISIONS.md §36. */
 .sg-table{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding-top:32px;}
 .sg-col{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:16px;overflow:hidden;}
-.sg-header{background:transparent;padding:14px 18px;border-bottom:2px solid rgba(255,255,255,.5);font-family:var(--font-mono);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#fff;}
+/* .sg-head wraps the header + its fine-print subtitle as one block, with the thick
+   divider now on the wrapper (was on .sg-header alone) so it sits below both lines instead
+   of splitting them — moved 2026-08-28 per Ben's request. */
+.sg-head{border-bottom:2px solid rgba(255,255,255,.5);}
+.sg-header{background:transparent;padding:14px 18px 2px;font-family:var(--font-mono);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#fff;}
 .sg-row{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.16);font-size:13.5px;color:rgba(255,255,255,.9);}
 .sg-delta{font-family:var(--font-mono);font-weight:700;}
 .delta-ahead{color:var(--score-mature);}
 .delta-behind{color:var(--score-adhoc);}
-/* fine print now lives inside each card as a trailing line instead of one shared caption
-   below both columns – see DESIGN_DECISIONS.md §9 for the copy decision. */
-.sg-foot{padding:4px 18px 14px;font-size:10.5px;color:rgba(255,255,255,.55);line-height:1.5;}
+/* fine print moved from a trailing footnote at the card's bottom to a subtitle right under
+   the header (2026-08-28, per Ben) -- bumped up from 10.5px/.55 opacity to read as a
+   subtitle paired with the header, not a trailing footnote, and set tight against the
+   header (no top padding) with just enough bottom padding to breathe before the divider. */
+.sg-foot{padding:0 18px 12px;font-size:12.5px;color:rgba(255,255,255,.72);line-height:1.4;}
 
 /* capability bar chart */
 .chart-legend{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:20px;}
@@ -337,8 +366,10 @@ a{color:inherit;}
         <div class="ysc-band-sub">{{ results.band_subtitle }}</div>
       </div>
       <div class="ysc-col ysc-narrative">
-        <div class="ysc-eyebrow">What This Means</div>
-        <p class="ysc-narrative-body">{{ results.narrative }}</p>
+        <div class="narrative-card">
+          <div class="ysc-eyebrow">What This Means</div>
+          <p class="ysc-narrative-body">{% for sentence in results.narrative_sentences %}<span>{{ sentence }}</span>{% endfor %}</p>
+        </div>
       </div>
       <div class="ysc-eyebrow ysc-eyebrow-tight ysc-peer-eyebrow-row">Where Your {{ results.industry }} Peer Leaders Ranked</div>
       <div class="ysc-col ysc-peer">
@@ -363,18 +394,22 @@ a{color:inherit;}
          "Your Strengths & Opportunities" eyebrow deleted per round-3 feedback (point 6). -->
     <div class="sg-table">
       <div class="sg-col">
-        <div class="sg-header">Where you scored highest</div>
+        <div class="sg-head">
+          <div class="sg-header">Where you scored highest</div>
+          <p class="sg-foot">Outscoring peers. Unweighted.</p>
+        </div>
         {% for s in results.strengths %}
         <div class="sg-row"><span>{{ s.name }}</span><span class="sg-delta delta-ahead">{{ s.score }} / 5</span></div>
         {% endfor %}
-        <p class="sg-foot">Outscoring peers. Unweighted.</p>
       </div>
       <div class="sg-col">
-        <div class="sg-header">Priority areas to improve</div>
+        <div class="sg-head">
+          <div class="sg-header">Priority areas to improve</div>
+          <p class="sg-foot">Biggest gaps. Weighted to your goals.</p>
+        </div>
         {% for g in results.gaps %}
         <div class="sg-row"><span>{{ g.name }}</span><span class="sg-delta {{ 'delta-ahead' if g.delta >= 0 else 'delta-behind' }}">{{ g.delta }}</span></div>
         {% endfor %}
-        <p class="sg-foot">Biggest gaps. Weighted to your goals.</p>
       </div>
     </div>
 
@@ -651,7 +686,7 @@ a{color:inherit;}
         points.map(function(p){
           return '<g class="curve-tick" data-level="' + p.level + '">' +
             '<line x1="' + p.x + '" y1="' + CURVE.bottom + '" x2="' + p.x + '" y2="' + (CURVE.bottom + 6) + '"></line>' +
-            '<text class="curve-tick-n" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">' + p.level + '</text>' +
+            '<text class="curve-tick-n" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">(' + p.level + ')</text>' +
             '<text class="curve-tick-name" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">' + esc(p.name) + '</text>' +
             '</g>';
         }).join('') +

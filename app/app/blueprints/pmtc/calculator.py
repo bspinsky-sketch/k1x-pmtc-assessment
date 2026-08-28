@@ -17,6 +17,7 @@ confirmed the PPTX report template does not exist yet (PROJECT_STATE.md
 Open Item #2). Wire it in when the report-generation phase starts.
 """
 
+from decimal import Decimal, ROUND_HALF_UP
 from statistics import mean
 
 
@@ -116,27 +117,40 @@ WEIGHT_COEFFICIENTS = {
     "governance_trust": {"accuracy": 2, "client_experience": 2},
 }
 
-# Peer Comparison Data (Data!B27:G39) and Peer Count (Data!B40:G40). Per
-# Ben's confirmation ("Peer comparison data is just seed values to start,
-# so it is actually as complete as it can be until we get actual data
-# rolling in"), every industry column currently holds the *same* seed
-# value per capability — the table is shaped to vary by industry so real
-# per-industry data can be dropped in later without a code change, it just
-# doesn't yet.
+# Peer scores: Data!D84:E96, the column literally headed "PEER LEADERS" --
+# this, not the differently-shaped "Peer Comparison Data" table at
+# Data!B27:G39 (see PEER_COUNTS below), is what the live workbook's own
+# Results!F7 (named range R_peerScore, the number shown under the score
+# ring) actually computes from -- its formula is =Data!E97, the average of
+# this column's 10 active rows. Found and fixed 2026-08-28 (CLAUDE_problems.md
+# P047): an earlier port used Data!B27:G39 for both peer count AND
+# per-capability peer score, but B27:G39's per-capability columns
+# (rows 28-39) are never actually referenced by any formula anywhere in
+# the workbook -- only its row 40 (Peer Count) is, via Results!F9's
+# HLOOKUP. B27:G39's per-capability numbers are vestigial/unused in the
+# real model. Re-verified against Ben's 2026-08-28 refreshed workbook --
+# this column is unchanged from the version this was first ported from.
+# Like B27:G39, this column has no per-industry breakdown (one column,
+# not five) -- so, same as before the fix, every industry currently shows
+# the same peer benchmark; that's a real characteristic of the source
+# data, not a shortcut taken here.
 PEER_SCORES = {
-    "document_intake": 2.5,
-    "inventory_management": 2.2,
-    "data_extraction": 2.1,
-    "data_validation": 1.9,
-    "data_review": 2.3,
-    "tax_analysis_reporting": 2.3,
-    "integration": 1.4,
-    "resource_structure": 1.5,
-    "advisory": 1.2,
-    "governance_trust": 1.7,
+    "document_intake": 3.5,
+    "inventory_management": 3.2,
+    "data_extraction": 3.3,
+    "data_validation": 2.3,
+    "data_review": 2.1,
+    "tax_analysis_reporting": 2.8,
+    "integration": 2.2,
+    "resource_structure": 2.1,
+    "advisory": 1.8,
+    "governance_trust": 2.2,
 }
 PEER_SCORES_BY_INDUSTRY = {industry: dict(PEER_SCORES) for industry in INDUSTRIES}
 
+# Peer Count (Data!B27:G40, row 40 specifically -- "Peer Comparison Data"'s
+# only part that's actually live-wired, via Results!F9's HLOOKUP). This
+# table IS broken out by industry, unlike PEER_SCORES above.
 PEER_COUNTS = {
     "Accounting": 133,
     "Family Office / Wealth Management": 43,
@@ -197,6 +211,41 @@ RECOMMENDED_TARGET = 3.6
 # Calculation
 # ---------------------------------------------------------------------------
 
+def _excel_round(value, digits=1):
+    """Match Excel's ROUND() -- round-half-away-from-zero on the value's
+    printed base-10 digits -- rather than Python's built-in round(), which
+    is round-half-to-even AND operates on the value's actual binary float
+    representation. The two disagree for sums of decimal (non-integer)
+    inputs that land exactly on a .x5 boundary: round(2.55, 1) is 2.5 in
+    Python (2.55 isn't exactly representable in binary; the nearest float
+    is a hair under it) but ROUND(2.55, 1) is 2.6 in Excel. Found via the
+    peer-score fix in CLAUDE_problems.md P047 -- mean(PEER_SCORES.values())
+    lands on exactly this boundary (25.5 / 10 = 2.55), and the live
+    workbook's own Data!E97 is explicitly =ROUND(AVERAGE(...), 1), not a
+    bare average. Routing the value through str() first (rather than
+    handing the float straight to Decimal) is what makes this match Excel
+    -- it rounds on the value's decimal digits as printed, not on whatever
+    exact binary fraction Python happens to be holding underneath.
+    """
+    quantum = Decimal("1").scaleb(-digits)
+    return float(Decimal(str(value)).quantize(quantum, rounding=ROUND_HALF_UP))
+
+
+def _split_sentences(text):
+    """Split a narrative paragraph into its individual sentences for the
+    Results page's "What This Means" card (one sentence per line -- Ben's
+    2026-08-28 design request, mocked up and approved before wiring in).
+    Every ARCHETYPE_BANDS narrative is hand-written prose ending each
+    sentence in ". " (a period-plus-space, never an ellipsis, question
+    mark, or abbreviation), so a plain split on that exact separator is
+    safe here -- this is not a general-purpose sentence tokenizer and
+    isn't meant to become one; if a future narrative rewrite introduces
+    something like "e.g." or "!", revisit this.
+    """
+    parts = text.split(". ")
+    return [p if p.endswith(".") else p + "." for p in parts]
+
+
 def _stable_rank_desc(values_by_key, ordered_keys):
     """Reproduce RANK.EQ(..., 0) + COUNTIF(...)-1 : a dense, stable rank by
     descending value, with ties broken by the capability's position in
@@ -230,8 +279,8 @@ def run_calculation(company, industry, goals, ratings):
     peer_by_cap = PEER_SCORES_BY_INDUSTRY.get(industry, PEER_SCORES)
     peer_count = PEER_COUNTS.get(industry, PEER_COUNTS["Accounting"])
 
-    your_score = round(mean(scores[k] for k in CAPABILITY_KEYS), 1)
-    peer_score = round(mean(peer_by_cap[k] for k in CAPABILITY_KEYS), 1)
+    your_score = _excel_round(mean(scores[k] for k in CAPABILITY_KEYS), 1)
+    peer_score = _excel_round(mean(peer_by_cap[k] for k in CAPABILITY_KEYS), 1)
 
     band = ARCHETYPE_BANDS[0]
     for candidate in ARCHETYPE_BANDS:
@@ -249,7 +298,7 @@ def run_calculation(company, industry, goals, ratings):
         {
             "key": k,
             "name": CAPABILITY_NAMES[k],
-            "delta": round(scores[k] - peer_by_cap[k], 1),
+            "delta": _excel_round(scores[k] - peer_by_cap[k], 1),
         }
         for k in gaps_order
     ]
@@ -268,6 +317,7 @@ def run_calculation(company, industry, goals, ratings):
         "band_name": band["name"],
         "band_subtitle": band["subtitle"],
         "narrative": band["narrative"],
+        "narrative_sentences": _split_sentences(band["narrative"]),
         "strengths": strengths,
         "gaps": gaps,
         "bar_rows": bar_rows,

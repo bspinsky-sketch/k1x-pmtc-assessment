@@ -137,7 +137,7 @@ rather than after.
 
 `/profile` is about 65KB and is sent uncompressed, where gzip/brotli would make
 it roughly 6x smaller. CloudFront cannot compress it, for a real reason
-documented in `CLAUDE_problems.md` P047 -- and the workaround that would enable
+documented in `CLAUDE_problems.md` P050 -- and the workaround that would enable
 it was rejected on a security ground, also documented there. Do not "fix" this
 by changing the CloudFront cache policy.
 
@@ -156,12 +156,19 @@ see `content-encoding: gzip`, where today you see nothing.
 
 ---
 
-## 5. Heads-up on merging
+## 5. The merge already happened
 
-`CLAUDE_problems.md` is append-only, and this branch added **P047**. If you
-added an entry during your own session, you may both have written a `P047` and
-git will flag a conflict at the end of the file. Resolve it by keeping both
-entries and renumbering yours to P048 -- no content is lost either way.
+`CLAUDE_problems.md` is append-only and you and Tristen both appended during
+the same session, so the P-numbers collided: you wrote P047 (Peer Leaders
+score), P048 (git LFS) and P049 (eyebrow overflow), and Tristen's CloudFront
+entry was also numbered P047. That was resolved when `main` was merged into
+this branch: **your three entries kept their numbers unchanged**, and
+Tristen's was renumbered to **P050**. Nothing was lost, and nothing on your
+side moved.
+
+If you have a link, note or commit message pointing at "P047" for the
+CloudFront cache-policy problem, it now means **P050**. `P047` today is your
+Peer Leaders entry.
 
 ---
 
@@ -171,6 +178,6 @@ entries and renumbering yours to P048 -- no content is lost either way.
 - `infra/lib/domain-stack.ts` -- every CloudFront decision, with the reasoning
   in comments (particularly why nothing is cached and why no `x-frame-options`
   header is sent).
-- `CLAUDE_problems.md` P047 -- the deploy failure hit along the way.
+- `CLAUDE_problems.md` P050 -- the deploy failure hit along the way.
 - `PROJECT_STATE.md` -- Open Items #10 and #11 track sections 3 and 4 above.
 - `SESSION_LOG.md`, entry `2026-08-28 17:15 EDT` -- the full session narrative.

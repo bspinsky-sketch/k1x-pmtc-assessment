@@ -165,3 +165,9 @@ is ready, to keep the repo and the live tool in sync.
   URL -- and it would mean `PmtcDomain` could no longer be deployed without
   touching `PmtcApp`, which is the property that makes the split useful
   today.
+- **Do not trust this file for what is currently deployed.** It describes how
+  to deploy, not what is live. `PROJECT_STATE.md`'s Authoritative Source
+  Registry is the record of which commit is actually running -- check there
+  rather than inferring from anything written here. (This bullet exists
+  because the section originally said "not yet actually deployed" and stayed
+  that way after the first real deploy.)
