@@ -179,7 +179,7 @@ are scoped by a `Smoma*` prefix, which nothing here can collide with. One is
 not: `Deny ses:* on configuration-set/ReportMail*`. The first deploy of this
 stack hit it, because the configuration-set construct had been given the same
 ID as SMOMA's and CDK derives that resource's physical name from the logical
-ID alone. See CLAUDE_problems.md P051. **Do not name anything here
+ID alone. See CLAUDE_problems.md P052. **Do not name anything here
 `ReportMail...`**, and prefer an explicit physical name for any resource whose
 generated name carries no stack prefix.
 
