@@ -19,7 +19,7 @@
     "//region": "Where the Lambda lives. The domain stack is always us-east-1 regardless, because CloudFront certificates have to be.",
     "region": "us-east-1",
 
-    "//prefix": "Names the stacks: <prefix>App and <prefix>Domain.",
+    "//prefix": "Names the stacks: <prefix>App, <prefix>Domain and <prefix>Mail.",
     "prefix": "Pmtc",
 
     "//flaskSecretKey": "Signs the Flask session cookie. Generate with: python3 -c \"import secrets; print(secrets.token_hex(32))\". Use a different value than your local .env. REAL SECRET -- never commit.",
@@ -48,6 +48,23 @@
     "//functionUrl": "The deployed PmtcApp stack's own AppUrl output, pasted in verbatim. Not a cross-stack reference, on purpose -- see bin/app.ts.",
     "functionUrl": "https://ssida3ob72gzabi2ai5r6kqzle0ltmcp.lambda-url.us-east-1.on.aws/",
 
-    "//domainStackNote": "domain, certArn and functionUrl go together: set all three, or none. Setting some but not all fails at synth by design."
+    "//domainStackNote": "domain, certArn and functionUrl go together: set all three, or none. Setting some but not all fails at synth by design.",
+
+    "//mailNote": "----- report delivery (PmtcMail). None of these is a secret, so unlike the app block above, the real values live here in the committed example rather than only in a local cdk.json. -----",
+
+    "//mailDomain": "The verified SES domain the report is sent from, and the switch that creates PmtcMail at all. Leave it empty and the stack is not in the app. NOTE: this stack does not verify the domain and must not -- geniusdrive.com is already verified in this account and is owned by the sibling SmomaMail stack. See mail-stack.ts.",
+    "mailDomain": "geniusdrive.com",
+
+    "//sender": "The From address. Needs no mailbox: SES verifies the domain, never the mailbox. Empty means reports@<mailDomain>.",
+    "sender": "reports@geniusdrive.com",
+
+    "//replyTo": "Where a reply to the report actually goes. Must be a real mailbox. Points at Genius Drive rather than K1x because until the tool is live every send is a test, and a test reply should not land on the client. Re-pointing it is a go-live step.",
+    "replyTo": "tklute@geniusdrive.com",
+
+    "//notify": "Where SES bounce and complaint notices go. AWS emails this address once to confirm the SNS subscription; until somebody clicks it, the topic notifies nobody.",
+    "notify": "tklute@geniusdrive.com",
+
+    "//bcc": "Who is blind-copied on every report, comma-separated. Empty as of 2026-08-28: K1x has not said who. It lives here rather than as a deploy-script argument on purpose -- the copy is blind, so a deploy that dropped it would look completely normal and nobody would notice until the reader asked why reports had stopped.",
+    "bcc": ""
   }
 }

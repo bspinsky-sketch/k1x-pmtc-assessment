@@ -2,12 +2,14 @@
 import { App } from 'aws-cdk-lib';
 import { AppStack } from '../lib/app-stack.js';
 import { DomainStack } from '../lib/domain-stack.js';
+import { MailStack } from '../lib/mail-stack.js';
 
 /**
- * Two stacks, deployed independently:
+ * Three stacks, deployed independently:
  *
  *   PmtcApp     the tool itself, on Lambda behind a Function URL
  *   PmtcDomain  CloudFront + the custom domain, in front of that Function URL
+ *   PmtcMail    report generation and delivery, on its own container Lambda
  *
  * Everything specific to a deploy is a context value, same convention as
  * `handoff/infra/bin/app.ts` -- set them once in `cdk.json` under `context`
@@ -23,9 +25,8 @@ import { DomainStack } from '../lib/domain-stack.js';
  * `cdk deploy --all` to do it either. The failure mode is a clean "no stacks
  * match" rather than a silently broken deployment.
  *
- * A MailStack (copied from `handoff/infra/lib/mail-stack.ts`) is the natural
- * third stack once Q3 (email delivery) is decided -- deployed separately, on
- * purpose, same reasoning.
+ * `PmtcMail` is the same story with its own switch (`mailDomain`), and it is
+ * the one stack that deploys from a machine holding no secrets at all.
  */
 const app = new App();
 
@@ -99,4 +100,38 @@ if (domainName || certificateArn || functionUrl) {
     env: { account, region: 'us-east-1' },
     description: `PMTC assessment tool: ${domainName} via CloudFront`,
   });
+}
+
+// The mail half: generating the report and emailing it.
+//
+// Opt-in like the other two, and separate for the same reason: `cdk deploy
+// PmtcMail` cannot roll back the live tool, and this stack needs none of the
+// app's secrets. `mailDomain` is the switch.
+//
+//     npx cdk deploy PmtcMail
+//
+// or, more usefully, `bash infra/deploy-mail.sh`, which fills in the
+// addresses and exports credentials in the shape the CDK CLI reads.
+//
+// Note what this stack deliberately does NOT do: verify the sending domain.
+// `geniusdrive.com` is already a verified SES identity in this account and is
+// owned by the sibling `SmomaMail` stack. See mail-stack.ts's `sendingDomain`
+// prop for why declaring it twice is not merely redundant but breaking.
+const mailDomain = app.node.tryGetContext('mailDomain') as string | undefined;
+
+if (mailDomain) {
+  new MailStack(app, `${prefix}Mail`, {
+    sendingDomain: mailDomain,
+    notify: app.node.tryGetContext('notify') as string | undefined,
+    sender: app.node.tryGetContext('sender') as string | undefined,
+    replyTo: app.node.tryGetContext('replyTo') as string | undefined,
+    bcc: app.node.tryGetContext('bcc') as string | undefined,
+    env,
+    description: 'PMTC report generation and delivery (LibreOffice on Lambda, sent via SES)',
+  });
+} else {
+  console.error(
+    `[cdk] ${prefix}Mail skipped: mailDomain is not set in cdk.json context. ` +
+      'Set it to deploy or update report delivery.',
+  );
 }

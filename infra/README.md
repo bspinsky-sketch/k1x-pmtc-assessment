@@ -1,11 +1,12 @@
 # PMTC infra
 
-Two stacks, deployed independently:
+Three stacks, deployed independently:
 
 | Stack | What it is | File |
 |---|---|---|
 | `PmtcApp` | The Flask assessment tool, on Lambda behind a Function URL | `lib/app-stack.ts` |
 | `PmtcDomain` | CloudFront and the custom domain, in front of that Function URL | `lib/domain-stack.ts` |
+| `PmtcMail` | Report generation and delivery: LibreOffice on a container Lambda, sent via SES | `lib/mail-stack.ts` |
 
 See each stack file for the full reasoning; this file is just the commands.
 
@@ -37,8 +38,9 @@ stacks already bootstrapped.
 ## Each stack appears only when its context is filled in
 
 `bin/app.ts` creates `PmtcApp` only when `flaskSecretKey`,
-`googleCredentialsJson` and `googleSheetId` are all set, and `PmtcDomain`
-only when `domain`, `certArn` and `functionUrl` are all set. `npx cdk list`
+`googleCredentialsJson` and `googleSheetId` are all set, `PmtcDomain`
+only when `domain`, `certArn` and `functionUrl` are all set, and `PmtcMail`
+only when `mailDomain` is set. `npx cdk list`
 tells you which ones you currently have.
 
 That is deliberate, and it is what lets the domain be deployed from a
@@ -139,22 +141,93 @@ becomes wrong. Standalone, it waits indefinitely and costs nothing.
 The `CloudFrontUrl` output works immediately and needs no DNS -- use it to
 prove the distribution is good while the CNAME propagates.
 
+## Deploying the mail stack
+
+```
+bash deploy-mail.sh
+```
+
+Takes no arguments. Every address lives in `cdk.json` context, and because
+none of them is a secret, the real values are also in the committed
+`cdk.example.json` -- so unlike the app's secrets, they survive this machine.
+
+**This one needs Docker running**, which is the only way it differs from the
+other two. The mailer is a container image because LibreOffice is the only
+faithful PPTX-to-PDF converter and does not fit a zip. `deploy-mail.sh`
+checks for the daemon and stops with a readable message rather than letting
+CDK fail several minutes in.
+
+**It does not verify the sending domain, and must not.** `geniusdrive.com` is
+already a verified, DKIM-signed SES identity in this account with production
+access, set up by the sibling SMOMA project, and it is a CloudFormation
+resource owned by `SmomaMail`. An SES identity is unique per account and
+region: declaring a second one fails, and if it ever succeeded, tearing down
+`PmtcMail` would revoke Mass Group's sending too. See `lib/mail-stack.ts`.
+
+**Before adding a resource to this stack, read the deny guardrails on the CDK
+execution role.**
+
+```
+aws iam get-policy-version --policy-arn arn:aws:iam::019163347448:policy/ToolKitCfnExec \
+  --version-id $(aws iam get-policy --policy-arn arn:aws:iam::019163347448:policy/ToolKitCfnExec \
+  --query 'Policy.DefaultVersionId' --output text) --query 'PolicyVersion.Document'
+```
+
+`tool0001` is a scoped bootstrap, not the account's admin one, and it carries
+explicit denies protecting the sibling SMOMA project's live resources. Most
+are scoped by a `Smoma*` prefix, which nothing here can collide with. One is
+not: `Deny ses:* on configuration-set/ReportMail*`. The first deploy of this
+stack hit it, because the configuration-set construct had been given the same
+ID as SMOMA's and CDK derives that resource's physical name from the logical
+ID alone. See CLAUDE_problems.md P052. **Do not name anything here
+`ReportMail...`**, and prefer an explicit physical name for any resource whose
+generated name carries no stack prefix.
+
+Two things happen by hand afterwards:
+
+1. **Confirm the SNS subscription.** AWS emails the `notify` address once.
+   Until somebody clicks it, the topic notifies nobody and bounces go
+   unwatched.
+2. **Redeploy `PmtcApp`.** The app's half of the wiring -- the
+   `lambda:InvokeFunction` grant and the `REPORT_MAILER_FUNCTION` environment
+   variable -- lives on the app's Lambda, so it belongs to whoever holds the
+   app secrets. Until that runs, the mailer is deployed and working but the
+   tool cannot call it.
+
+To see what is actually deployed rather than what `cdk.json` claims:
+
+```
+bash check-mail.sh
+```
+
+That is the only way to see the blind-copy address, which is invisible in
+every message it appears in.
+
+`../mailer/README.md` covers the function itself: what it sends today, why
+the invoke is asynchronous, and what changes when the real report template
+arrives.
+
 ## Updating after a code change
 
 `npx cdk synth PmtcApp` then `npx cdk deploy PmtcApp` -- CDK diffs against
 the deployed stack and only touches what changed. A plain Flask/template
 edit repackages the Lambda; an `app-stack.ts` edit changes infrastructure.
-Nothing in `PmtcDomain` needs redeploying for an app change: it points at
-the Function URL, which does not change, and it caches nothing.
+Nothing in `PmtcDomain` or `PmtcMail` needs redeploying for an app change:
+`PmtcDomain` points at the Function URL, which does not change, and caches
+nothing; `PmtcMail` is a separate function the app calls by name. Changing
+the mailer itself (`mailer/`) is the reverse: `bash deploy-mail.sh`, and the
+app needs nothing.
 
 Deploying and committing are two separate actions -- do both when a change
 is ready, to keep the repo and the live tool in sync.
 
 ## What this does not do yet
 
-- No email delivery (Q3 still open in PROJECT_STATE.md). A `MailStack`
-  copied from `../../handoff/infra/lib/mail-stack.ts`, deployed as its own
-  stack, is the natural next piece once that is decided.
+- The report itself is a placeholder. The whole delivery path is real and
+  deployable, but the deck it fills is a single slide drawn from
+  scratch, because the K1x report template does not exist yet
+  (PROJECT_STATE.md Open Item #2). See `../mailer/README.md`, "When the real
+  deck arrives" -- it is a template swap, not an architecture change.
 - Secrets are plain Lambda environment variables, not Secrets Manager.
   Worth moving once this tool handles real client data rather than the
   current test Sheet -- an environment variable is visible to anyone with
