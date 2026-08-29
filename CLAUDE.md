@@ -64,7 +64,7 @@ All files in: `C:\Users\Ben\Documents\GENIUS DRIVE\GD Projects\K1x\PMTC assessme
 | Output Report mockup (12-page HTML + PDF, "Meridian Fund Services" dummy scenario) | Reference for the eventual live Output Report build | **Built and delivered to Ben 2026-08-28, not saved in the project folder** -- exists only in that session's conversation/downloads. Format: HTML-to-PDF via Playwright/headless Chromium, not PPTX -- see Key Decisions Log and "Output Report Slide Map" below. **This is the template `mailer/generate.py` needs**; until it is in the repo, the mailer renders a placeholder of its own. |
 | `Application\app\` | Flask application (Phase 2+) | Built -- Phases 2/3/4/10 complete |
 | `Application\infra\` | CDK deploy code: three independent stacks (`PmtcApp`, `PmtcDomain`, `PmtcMail`) | Built. `cdk.json` is gitignored (real secrets); `cdk.example.json` is the committed template |
-| `Application\mailer\` | The report mailer: container Lambda, headless Chromium, SES. See its own `README.md` | **Live** (deployed 2026-08-28, verified end to end). Renders the Output Report HTML to PDF; a placeholder until the mockup above is in the repo |
+| `Application\mailer\` | The report mailer: container Lambda, SES, currently LibreOffice + python-pptx. See its own `README.md` | **Live end to end, `PmtcApp` included** (deployed 2026-08-28, verified with a real send and inbox delivery). Renders a placeholder single-slide deck with the visitor's real computed figures -- not yet the actual Output Report HTML, since that mockup isn't in the repo yet. Conversion from PPTX/LibreOffice to the agreed HTML-to-PDF/Chromium pipeline is open and in progress (Open Item #17) |
 
 ---
 
