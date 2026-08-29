@@ -13,6 +13,7 @@ from app.blueprints.pmtc.calculator import (
     run_calculation, GOAL_KEYS, CAPABILITY_KEYS, INDUSTRIES,
 )
 from app.blueprints.pmtc import data_capture
+from app.blueprints.pmtc import emailer
 
 
 def _int_or_zero(value):
@@ -177,4 +178,17 @@ def lead_capture():
     data_capture.update_lead_info(
         row_number, lead['first_name'], lead['last_name'], lead['email'], lead['opt_in'],
     )
+    # The report itself. Fired after the lead is recorded, never before: the
+    # Sheet is the durable record and the mail is not, so if only one of the
+    # two can happen it has to be the Sheet. The call is asynchronous inside
+    # emailer.py, so it costs this request milliseconds rather than the minute
+    # the PDF conversion takes -- see emailer.py's module docstring.
+    #
+    # session['results'] is passed whole rather than picked apart, so that
+    # adding a figure to the report later is a change in the mailer only.
+    emailer.send_report(session.get('results') or {}, lead)
+
+    # 'received' is about the lead, and it is honest about it: the modal has
+    # already promised a report, and by design nothing here waits long enough
+    # to know whether one was sent.
     return jsonify({'status': 'received'})
