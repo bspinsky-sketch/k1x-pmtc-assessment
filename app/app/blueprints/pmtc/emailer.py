@@ -1,145 +1,126 @@
 """
-Email delivery module for the ITSM Business Value Framework.
+Email delivery module for the K1x PMTC Assessment.
 
-Pattern:
-  1. Generate the pptx report (via report.py)
-  2. Convert pptx -> pdf using LibreOffice headless
-  3. Send the pdf as an attachment via Gmail SMTP (App Password auth)
-  4. Clean up all temp files
+This module does not send anything itself. It hands the job to a separate
+Lambda -- `mailer/handler.py`, deployed as the `PmtcMail` stack -- and returns
+immediately.
 
-Credentials read from environment:
-  GMAIL_ADDRESS      -- sender address (itsmbvf@gmail.com)
-  GMAIL_APP_PASSWORD -- 16-char App Password (not the Gmail login password)
+Why the work is not done here:
+
+  - The report is a PDF converted from a PowerPoint deck, and the only
+    faithful converter is LibreOffice. LibreOffice does not fit a zip package
+    and needs roughly 3GB and a minute of CPU. This app's own Lambda is a
+    512MB pure-Python zip with a 15-second timeout, sitting behind a Function
+    URL with a person waiting on the other end of it.
+  - Nothing about generating a report should be able to fail a request the
+    visitor is watching. The modal says "Report on its way" the moment the
+    lead is captured, and that is a promise about the lead being recorded, not
+    about the mail server.
+
+So the invoke is asynchronous (`InvocationType='Event'`): AWS accepts the
+payload, this returns in a few milliseconds, and the report is generated and
+sent after the visitor's request has already finished. Failures land in the
+mailer's own CloudWatch log, which is the only place they can land, because by
+then there is nobody to tell.
+
+That is survivable rather than careless, and for the same reason the data
+capture is: the lead is already in the Google Sheet by a separate path
+(`data_capture.py`), so a report that did not send can be sent by hand. A lead
+that was never captured is gone.
+
+Configuration read from the environment (set by `infra/lib/app-stack.ts`):
+  REPORT_MAILER_FUNCTION  -- the mailer Lambda's function name
+  AWS_REGION              -- set by the Lambda runtime itself
 """
 
+import json
+import logging
 import os
-import shutil
-import smtplib
-import subprocess
-import sys
-import tempfile
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from pathlib import Path
 
-from app.itsmbvf.report import generate_report
+log = logging.getLogger(__name__)
+
+_client = None  # module-level boto3 Lambda client (lazy init)
 
 
-def _libreoffice_cmd():
-    """Return the LibreOffice executable for the current platform."""
-    if sys.platform == 'win32':
-        candidates = [
-            r'C:\Program Files\LibreOffice\program\soffice.exe',
-            r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
-        ]
-        for path in candidates:
-            if os.path.exists(path):
-                return path
-        raise RuntimeError(
-            'LibreOffice not found. Install from https://www.libreoffice.org/download/ '
-            'then restart the server.'
+def _get_client():
+    """Return a boto3 Lambda client, or None if one cannot be made.
+
+    Lazy and defensive for the same reason `data_capture._get_sheet()` is:
+    outside Lambda -- a developer's machine running `flask run` -- there may be
+    no credentials and no boto3 at all, and that must read as "mail skipped",
+    never as an error the visitor sees.
+
+    boto3 is not in `requirements-lambda.txt` because the managed Python
+    runtime already provides it. That is also why it is imported in here
+    rather than at module scope: a local dev environment installing only
+    `requirements.txt` has no boto3, and an import at the top of this file
+    would take the whole blueprint down with it.
+    """
+    global _client
+    if _client is not None:
+        return _client
+    try:
+        import boto3
+
+        _client = boto3.client(
+            'lambda', region_name=os.environ.get('AWS_REGION', 'us-east-1'),
         )
-    return 'libreoffice'
+        return _client
+    except Exception as exc:
+        log.warning('emailer: no Lambda client available: %s', exc)
+        return None
 
 
-def _pptx_to_pdf(pptx_path):
-    """
-    Convert a pptx file to pdf using LibreOffice headless.
-    Returns the path to the generated pdf (in its own temp dir).
-    Caller must delete the returned directory when done.
-    """
-    tmp_out = tempfile.mkdtemp()
-    result = subprocess.run(
-        [_libreoffice_cmd(), '--headless', '--norestore', '--nofirststartwizard',
-         '--convert-to', 'pdf', '--outdir', tmp_out, pptx_path],
-        capture_output=True, text=True, timeout=120
-    )
-    if result.returncode != 0:
-        shutil.rmtree(tmp_out, ignore_errors=True)
-        raise RuntimeError(f'LibreOffice PDF conversion failed (code {result.returncode}): {result.stderr}')
-
-    # LibreOffice names the output after the input file
-    base = Path(pptx_path).stem
-    pdf_path = os.path.join(tmp_out, base + '.pdf')
-    if not os.path.exists(pdf_path):
-        shutil.rmtree(tmp_out, ignore_errors=True)
-        raise RuntimeError('LibreOffice produced no PDF output.')
-
-    return pdf_path, tmp_out
-
-
-def send_report_email(profile, priorities, kpis, recipient_email, investment=None):
-    """
-    Generate the pptx report, convert to PDF, and email it to recipient_email.
+def send_report(results, lead):
+    """Ask the mailer for one report. Never raises.
 
     Args:
-        profile:          dict from session['profile']
-        priorities:       dict from session['priorities']
-        kpis:             dict from session['kpis']
-        recipient_email:  str -- user-supplied email address
+        results: the dict `run_calculation()` returned, straight from
+                 session['results']. Passed whole rather than picked apart,
+                 so that adding a figure to the report later is a change in
+                 the mailer only.
+        lead:    the dict routes.py assembled from the modal, with at least
+                 'email' populated.
 
-    Raises:
-        RuntimeError on generation or SMTP failure.
+    Returns:
+        True if AWS accepted the invocation, False otherwise. The caller uses
+        this for logging only -- there is deliberately nothing a False can be
+        turned into that would help the visitor, who has already been told the
+        report is coming.
     """
-    gmail_address  = os.environ.get('GMAIL_ADDRESS', '')
-    gmail_password = os.environ.get('GMAIL_APP_PASSWORD', '')
-    if not gmail_address or not gmail_password:
-        raise RuntimeError('Email credentials not configured. Check GMAIL_ADDRESS and GMAIL_APP_PASSWORD in .env.')
+    recipient = (lead or {}).get('email', '').strip()
+    if not recipient:
+        log.warning('emailer: no recipient, nothing sent')
+        return False
 
-    company   = profile['company_name']
-    pptx_path = None
-    pptx_dir  = None
-    pdf_dir   = None
+    function_name = os.environ.get('REPORT_MAILER_FUNCTION', '').strip()
+    if not function_name:
+        # The ordinary state on a developer's machine, and the state on any
+        # deploy made before PmtcMail existed. Not an error.
+        log.info('emailer: REPORT_MAILER_FUNCTION not set, report not requested')
+        return False
+
+    client = _get_client()
+    if client is None:
+        return False
 
     try:
-        # Step 1: generate pptx
-        pptx_path, pptx_dir = generate_report(profile, priorities, kpis, investment)
-
-        # Step 2: convert to pdf
-        pdf_path, pdf_dir = _pptx_to_pdf(pptx_path)
-
-        # Step 3: build email
-        subject  = f'{company} -- ITSM Business Value Assessment'
-        body_html = f"""\
-<p>Please find attached your ITSM Business Value Assessment for <strong>{company}</strong>.</p>
-<p>This report summarises the projected 3-year financial impact of an ITSM programme,
-based on the profile and challenge priorities you entered.</p>
-<p style="color:#1F3864;font-weight:bold;">Key results at a glance:</p>
-<ul>
-  <li>3-Year ROI: {kpis['roi']}</li>
-  <li>Payback Period: {kpis['payback']}</li>
-  <li>3-Year Benefits: {kpis['benefit_3y']}</li>
-  <li>IRR: {kpis['irr']}</li>
-</ul>
-<p style="font-size:0.85em;color:#666;">
-ITSM Business Value Assessment &nbsp;|&nbsp; Confidential
-</p>
-"""
-        msg = MIMEMultipart()
-        msg['From']    = gmail_address
-        msg['To']      = recipient_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body_html, 'html'))
-
-        safe_name   = ''.join(c for c in company if c.isalnum() or c in (' ', '-', '_')).strip()
-        attach_name = f'{safe_name} - ITSM Business Value Assessment.pdf'
-
-        with open(pdf_path, 'rb') as f:
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload(f.read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f'attachment; filename="{attach_name}"')
-        msg.attach(part)
-
-        # Step 4: send via Gmail SMTP SSL
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(gmail_address, gmail_password)
-            server.send_message(msg)
-
-    finally:
-        if pptx_dir:
-            shutil.rmtree(pptx_dir, ignore_errors=True)
-        if pdf_dir:
-            shutil.rmtree(pdf_dir, ignore_errors=True)
+        client.invoke(
+            FunctionName=function_name,
+            # 'Event', not 'RequestResponse'. The difference is the whole
+            # design: RequestResponse would hold this request open for the
+            # minute the conversion takes, blow through the app Lambda's
+            # 15-second timeout, and show the visitor a 504 for a report that
+            # was in fact about to be sent perfectly.
+            InvocationType='Event',
+            Payload=json.dumps({'results': results, 'lead': lead}).encode('utf-8'),
+        )
+        log.info('emailer: report requested for %s via %s', recipient, function_name)
+        return True
+    except Exception as exc:
+        # Swallowed on purpose. See the module docstring: by the time this
+        # runs, the visitor has already been told the report is on its way,
+        # and the lead is already recorded. Raising here would turn a mail
+        # problem into a failed request for no gain.
+        log.warning('emailer: could not request report for %s: %s', recipient, exc)
+        return False

@@ -469,3 +469,91 @@ Wireframe and design-system work happened across this project before this log wa
 - Ben: "iframe site test all good" -- confirmed Profile -> Assessment -> Results all work inside `iframe_embed_test.html`'s cross-site frame. Open Item #12 (the launch-blocking session-cookie bug Tristen's session flagged) is now fully closed: fixed in code, committed, deployed, and verified in the actual scenario it protects against, not just via a response header.
 - Closed out CLAUDE.md's `AFTER_YOU_PULL.md` banner per its own instruction ("delete once both are done") -- replaced with a one-line note in the header pointing at the custom domain and P050 for anyone who needs the history.
 - Nothing else open from today's launch-readiness work. Remaining open items are all pre-existing and unrelated: `klutetr/new-domain`'s branch itself (now merged, nothing further needed), Q3 (email delivery), the Output Report mockup wiring (Open Item #2/P051), no PPTX/report send yet, and Open Item #13 (page compression, performance-only).
+---
+
+## 2026-08-28 19:17 EDT -- Phase 6 (email delivery) built, not deployed
+
+**Who:** Tristen, on his own Mac. Session-start protocol run (CLAUDE.md, PROJECT_STATE.md, STANDING_RULES.md, CLAUDE_problems.md index, PLATFORM.md).
+
+**The ask:** "add the email service to send the report whenever a user clicks the button at the end" -- and, explicitly, "I believe this can be done by doing the same thing we did with Mass Group." Confirmed during the session that the end state is a PDF of the real report, that Ben is building that template now, that a test message is fine in the meantime, that replies come to Tristen, and that the blind-copy address is still pending from K1x.
+
+**What the Mass Group comparison turned out to be worth, checked rather than assumed.** Read `mass_group_SMOMA/infra/MAIL.md`, `mail-stack.ts` and `report/lambda/handler.py` in full, then checked the live account rather than trusting the docs:
+
+- Same AWS account (`019163347448`) and region (us-east-1) as PMTC.
+- `geniusdrive.com` is an SES **domain identity, DKIM-signed, `VerificationStatus: SUCCESS`**.
+- The account **already has production access**: 50,000/day, 14/sec.
+
+So the two steps in `MAIL.md` with a queue in front of them -- the GoDaddy CNAMEs and the AWS human review -- are already done and PMTC inherits both. Nothing to wait on.
+
+**And the trap that came with that.** The identity is a CloudFormation resource owned by `SmomaMail`. SES identities are unique per account and region, so copying Mass Group's stack verbatim would have declared a second `ses.EmailIdentity` for the same domain: the deploy fails, and had it somehow succeeded, deleting `PmtcMail` later would revoke Mass Group's sending. `mail-stack.ts` therefore uses the domain **only as a string to build an ARN for an IAM policy** and declares no identity. Verified in the synthesized template: no `AWS::SES::EmailIdentity` resource exists. It does create its own configuration set and SNS topic so the two tools' bounce feeds stay separate -- and because the shared identity carries SmomaMail's set as its *default*, every PMTC send has to name its own explicitly, which `handler.py` does via `REPORT_CONFIG_SET`.
+
+**Three deliberate departures from the Mass Group design, each for a reason specific to this tool:**
+
+1. **No Function URL on the mailer.** SMOMA needs one, plus a shared token shipped inside its `index.html`, because its front end is a static page with no backend. PMTC has a Flask backend, so `PmtcApp`'s execution role invokes `pmtc-report-mailer` by name through IAM. No public endpoint, no token in the page, nothing to rate-limit.
+2. **The invoke is asynchronous** (`InvocationType='Event'`) with `retryAttempts: 0` and a handler that catches its own exceptions. Synchronous would blow through the app Lambda's 15s timeout on a conversion that took 66s on SMOMA, and show a 504 for a report that was about to send perfectly. The retry settings are belt and braces against a *duplicated* report, which is the failure that would actually cost trust.
+3. **No named contact in the message body.** SMOMA put Scott Shaul's block in the body while `Reply-To` still pointed at Genius Drive, and its own MAIL.md documents the result: two routes to two different people that nothing holds in step. PMTC's sign-off names nobody, so `Reply-To` is the only route out of the message -- which is exactly the pre-go-live property MAIL.md wanted and lost.
+
+**The seam between the two stacks is a literal function name**, not a CDK cross-stack reference. A reference would mean neither stack synthesizes without the other in the same app, breaking the property `bin/app.ts` exists to protect. The cost, written into both files' comments: `MailStackProps.functionName` and `app-stack.ts`'s `REPORT_MAILER_FUNCTION` must agree and nothing enforces it.
+
+**What is sent until Ben's deck lands.** Not an HTML-only email. `generate.py` draws a single slide from scratch in the tool's own palette and fills it with the visitor's real computed results, so the whole pipeline runs for real. Verified inside the actual ARM64 image before any deploy attempt: pptx generated, LibreOffice converted it, 28KB PDF out. Rendered it to PNG and **looked at it** rather than declaring success on an exit code -- which is what caught the one real defect of the session: python-pptx gives every text box a 0.1in left inset by default, so boxes placed at the same x did not share a left edge and the score sat visibly out of line with its own label. `_textbox()` now zeroes all four insets. Re-rendered and re-checked. Fonts resolved to Carlito via `fonts.conf` rather than falling back to Liberation Mono, which is the failure SMOMA measured and this project inherited the fix for.
+
+**App side.** `emailer.py` was still the ITSM starter: Gmail SMTP, LibreOffice-on-the-web-server, and an `import app.itsmbvf.report` for a module that does not exist in this project. Rewritten entirely. `routes.py`'s `POST /api/lead` now asks for the report **after** the Sheets write, never before -- the Sheet is the durable record and the mail is not, so if only one can happen it has to be the Sheet.
+
+**Verification done, beyond synth:**
+
+- `npx cdk list` -> `PmtcDomain`, `PmtcMail`, with `PmtcApp` correctly skipped on this machine.
+- `npx cdk synth PmtcMail` clean; template inspected resource by resource (arm64, 3008MB, 180s, `MaximumRetryAttempts: 0`, fixed function name, no `EmailIdentity`).
+- Container built for `linux/arm64` and the full generate-then-convert path run inside it.
+- `POST /api/lead` driven through the real Flask test client in three states: unconfigured (no invoke attempted, 200), configured (invoked once, `InvocationType='Event'`, right function, recipient and all seven expected result keys present in the payload), and invoke raising (request still 200). First run of that test showed `your_score=0.0` -- traced to the test posting the wrong field names, not a bug: `assessment_submit()` reads `rating_<key>`. Fixed the test, added one non-uniform rating so a flat 0 or 2 cannot pass by luck, re-ran: 2.2, which is (9x2 + 4)/10.
+- `bash check_files.sh` re-run; `emailer.py`'s structural drop (145 -> 126 lines) is the deliberate rewrite, verified complete before rebaselining with `check_structure.py --update`.
+
+**What did not happen: the deploy.** `npx cdk deploy PmtcMail` was refused twice by the agent harness's own permission classifier, not by AWS and not by anything in the code. Everything up to the deploy is done and verified. This is a human `!`-prefixed run, tracked as PROJECT_STATE.md Open Item #14, which also covers the second deploy (`PmtcApp`, for the app-side IAM grant and env var) that has to come from whoever holds the app secrets -- not this machine, whose `cdk.json` deliberately leaves them blank.
+
+**Open Item #15** records the two mail decisions still with K1x: the sender being a `geniusdrive.com` address on a K1x-branded tool, and who is blind-copied.
+
+**Files:** new -- `mailer/{Dockerfile,handler.py,generate.py,fonts.conf,try_mailer.py,README.md}`, `infra/lib/mail-stack.ts`, `infra/deploy-mail.sh`, `infra/check-mail.sh`. Changed -- `infra/bin/app.ts`, `infra/lib/app-stack.ts`, `infra/cdk.example.json`, `infra/cdk.json` (local, gitignored), `infra/README.md`, `app/app/blueprints/pmtc/emailer.py`, `app/app/blueprints/pmtc/routes.py`, `app/.check_baseline.json`, plus `CLAUDE.md`, `PROJECT_STATE.md` and this file.
+
+**Not committed.** Per Open Item #5's standing practice, this session used read-only git only.
+
+### 2026-08-28 19:45 EDT -- First `deploy-mail.sh` failed on an account guardrail (P052), fixed
+
+Tristen ran the deploy. It built and pushed the container image, then `CREATE_FAILED` and rolled back on the configuration set:
+
+> `cdk-tool0001-cfn-exec-role... is not authorized to perform: ses:CreateConfigurationSet on resource: ...configuration-set/ReportMail7632DF4B-2h22eeJYBP3v with an explicit deny in an identity-based policy: ToolKitCfnExec`
+
+**Read the policy rather than guessing.** `ToolKitCfnExec` allows `ses:*` on `*` and then carries seven `Deny` guardrails protecting the sibling SMOMA project's live resources. The relevant one:
+
+    Deny ses:* on arn:aws:ses:us-east-1:019163347448:configuration-set/ReportMail*
+
+My own doing. `mail-stack.ts` was written by reading SMOMA's stack closely, and the `ses.ConfigurationSet` construct got the same construct ID, `'ReportMail'`. CDK derives a ConfigurationSet's physical name from the logical ID alone -- no stack-name prefix -- so a brand new resource belonging to a different project matched a guardrail meant for somebody else's, and was refused by the same policy that also allows it.
+
+Worth noting what could not have caught this: `cdk synth` was clean, `tsc --noEmit` was clean, and the synthesized template was read resource by resource. The template is correct. The only thing wrong was that a name CloudFormation had not yet generated would match a pattern in an IAM policy. Same family as P044/P045/P050.
+
+**Fix:** construct renamed to `PmtcReportMail`, plus an explicit `configurationSetName: 'pmtc-report-mail'` -- the explicit name is the load-bearing half, since it cannot drift back into that prefix when a logical ID changes for an unrelated reason. Documented as CLAUDE_problems.md P052.
+
+**Then checked the rest before handing it back, rather than re-running and finding out.** Every other resource this stack creates was compared against every deny in the policy -- SNS topic `PmtcMail-MailAlerts...` against `SmomaMail-*`, Lambda `pmtc-report-mailer` against `SmomaMail-*`, the execution role against `Smoma*` and `cdk-hnb659fds-*`, the stack name against the three protected stacks, assets against the `cdk-hnb659fds-assets-*` bucket deny -- and the allow statement confirmed to cover every service the stack touches (`ses`, `sns`, `lambda`, `logs`, `ecr`, `s3`, `cloudformation`, and the specific `iam:` role actions). None collide.
+
+**State after the failure:** stack `ROLLBACK_COMPLETE`. Read the events rather than assuming: the config set was the only real `CREATE_FAILED`; everything else says "Resource creation cancelled", including the SNS topic, so **no confirmation email was sent** and there is no stale one to ignore. Nothing live was touched.
+
+**Not treated as a bypass, and said so in P052.** The guardrail's Sid is `NeverTouchTheApexIdentityOrLiveConfigSet`. The apex identity is genuinely protected, and this stack deliberately never declares it. The "live config set" means SMOMA's; ours is a different resource the same policy explicitly allows. The `ReportMail*` prefix was a coarse proxy for "theirs". The precise fix belongs on the policy -- narrowing it to the sibling set's exact ARN, which is how every other statement in that policy is written -- and is recommended in P052 rather than done here, because the policy is account infrastructure rather than this project's.
+
+**Shared-doc sync rule not honoured this session:** P052 is general-purpose and belongs in the `WEB PROJECT template`'s own `CLAUDE_problems.md`, but that folder is not on this machine (only PMTC's copy exists here). Flagged for Ben rather than silently skipped -- and note the template's highest P-number should be checked before assigning P052 there, in case another project has already claimed it.
+
+### 2026-08-28 20:00 EDT -- `PmtcMail` deployed and verified end to end
+
+Second attempt succeeded: 57.89s, `pmtc-report-mailer` live, configuration set `pmtc-report-mail`, SNS topic `PmtcMail-MailAlerts...`.
+
+**Then verified it for real rather than trusting the deploy output.** `python3 mailer/try_mailer.py tklute@geniusdrive.com` (synchronously, which is what that harness is for) returned `{"ok": true}`. The function's own log:
+
+    generating for tklute@geniusdrive.com, company Wolf & Marlowe Family Office LLP, score 1.8
+    converted to pdf in 3.9s, 28852 bytes
+    sent to tklute@geniusdrive.com, message id 010001a04ad06b1d-..., replies to tklute@geniusdrive.com, copied to nobody
+    Duration: 4143 ms  Billed: 6610 ms  Memory: 3008 MB  Max Memory Used: 368 MB  Init: 2466 ms
+
+**And then checked the inbox, because SES accepting a message is not the same as a mailbox receiving one.** Confirmed delivered to `INBOX`, not spam, 45KB, carrying `K1x Private Market Tax Capability Assessment.pdf` with the right body and the right figures. That is the half of the pipeline no amount of AWS output can confirm, and on a freshly-used sending domain it is the half most worth checking.
+
+Two numbers worth keeping: **3.9s conversion** against SMOMA's 66s, because a one-slide placeholder is not a filled 20-slide deck -- expect this to grow substantially when Ben's template lands, which is the argument for leaving memory at the account ceiling rather than trimming it. And **368MB peak of 3008MB**: the memory setting here buys CPU, not headroom, exactly as `mail-stack.ts` says.
+
+**One real defect found by doing this rather than assuming it.** The first thing wanted after a successful send was the log, and `aws logs tail /aws/lambda/pmtc-report-mailer` returned `ResourceNotFoundException` -- CDK had generated `PmtcMail-ReportMailerLogs6692A03F-tNeZuXsBFWMG`. On a function explicitly designed to fail silently, whose log is therefore the only record that a report never arrived, an unguessable log group name is an obstacle at precisely the wrong moment. Fixed with an explicit `logGroupName: '/aws/lambda/pmtc-report-mailer'`, and `try_mailer.py` now reads the live log group off the function rather than printing an assumed path. Needs one more mail deploy to take effect; tracked as Open Item #16 and deliberately **not** given its own deploy trip -- it rides along with the deploy that sets the blind-copy address once K1x names someone.
+
+**Still open:** the `PmtcApp` redeploy (Open Item #14b), which only Ben can run, and confirming the SNS subscription email so bounces are watched.

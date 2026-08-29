@@ -9,9 +9,25 @@ import * as fs from 'node:fs';
 // that, since it costs nothing and works regardless of how it's ever run.)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import type { Construct } from 'constructs';
+
+/**
+ * The report mailer this app invokes when a visitor asks for their report.
+ *
+ * A literal name rather than a cross-stack reference, deliberately. Importing
+ * `PmtcMail`'s function would mean this stack could not synthesize without
+ * that stack in the same app, which breaks the property `bin/app.ts` exists
+ * to protect: each stack deploys from a machine holding only its own context.
+ * The cost is that this string and `MailStackProps.functionName` have to
+ * agree, and nothing enforces it -- change either and check the other.
+ *
+ * If `PmtcMail` is not deployed, invoking this simply fails and `emailer.py`
+ * logs it. Nothing about the assessment flow depends on the mailer existing.
+ */
+const REPORT_MAILER_FUNCTION = 'pmtc-report-mailer';
 
 export interface AppStackProps extends StackProps {
   /**
@@ -66,9 +82,9 @@ export interface AppStackProps extends StackProps {
  * unchanged.
  *
  * **Deploy this separately from anything else**, same reasoning as the
- * handoff kit's own two-stacks-not-one rule -- this stack knows nothing about
- * mail (Q3 is still open) or a custom domain, and adding either later is a
- * new stack or a prop, not a rewrite of this one.
+ * handoff kit's own two-stacks-not-one rule. This stack knows nothing about
+ * the custom domain, and all it knows about mail is the name of the function
+ * it hands a report request to -- both live in their own stacks.
  *
  * Packaging is pure-Python-only by design (see `requirements-lambda.txt`'s
  * own comment) specifically so this stack does NOT need Docker at deploy
@@ -171,10 +187,35 @@ export class AppStack extends Stack {
         FLASK_SECRET_KEY: props.flaskSecretKey,
         GOOGLE_CREDENTIALS_JSON: props.googleCredentialsJson,
         GOOGLE_SHEET_ID: props.googleSheetId,
+        // Which function `emailer.py` asks for the report. An environment
+        // variable rather than a constant in the Python, so that a rename or
+        // a second environment is a redeploy rather than a code change.
+        REPORT_MAILER_FUNCTION,
       },
       logGroup,
       description: 'PMTC assessment tool (Flask via Mangum)',
     });
+
+    // Asking the mailer for a report. Invoke only, and only that one
+    // function by name -- this app has no business calling anything else in
+    // the account.
+    //
+    // An identity-based policy on this role is the whole permission: caller
+    // and callee are in the same account, so no resource policy is needed on
+    // the mailer, which is what keeps `PmtcMail` free of any reference back
+    // to this stack. The ARN is built from a literal name for the same reason
+    // (see REPORT_MAILER_FUNCTION above).
+    //
+    // Granted unconditionally, including before `PmtcMail` exists. A policy
+    // naming a function that is not there is inert, whereas making it
+    // conditional would mean the app needed redeploying in a particular order
+    // relative to the mailer.
+    fn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['lambda:InvokeFunction'],
+      resources: [
+        `arn:aws:lambda:${this.region}:${this.account}:function:${REPORT_MAILER_FUNCTION}`,
+      ],
+    }));
 
     // Same construct as MailStack's Function URL: one route, no CORS (the
     // page navigating to it IS the request, not a fetch() reading a JSON
