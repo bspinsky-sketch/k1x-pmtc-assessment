@@ -2,20 +2,7 @@
 
 **Purpose:** Authoritative project reference for Claude. Read at every session start before any substantive work.
 
-**Last updated:** 2026-08-28 19:46 EDT (Open Item #12 -- launch-blocking iframe-embed cookie fix implemented and verified with a real `Set-Cookie` header, not yet deployed)
-
-> **`AFTER_YOU_PULL.md`'s launch-blocking cookie bug is fixed in code, not yet deployed.**
-> The tool has a custom domain (`https://k1x-pmtc.geniusdrive.com/`), added by
-> Tristen. Open Item #12 (Flask session cookie had no `SameSite`/`Secure`,
-> dropping the session inside the K1x iframe embed) is fixed in
-> `app/app/__init__.py` (2026-08-28 19:46 EDT) and verified with a real
-> `Set-Cookie` header via the Flask test client -- both the production path
-> (`SameSite=None; Secure`, no `.env` present) and the local-dev opt-out
-> (`SameSite=Lax`, `.env`'s `SESSION_COOKIE_SAMESITE`/`SESSION_COOKIE_SECURE`).
-> **Still needs a `PmtcApp` redeploy to go live**, and per `AFTER_YOU_PULL.md`
-> section 3, still needs a real cross-site iframe check afterward -- a
-> Set-Cookie header proves the config, not that a real browser accepts the
-> cookie in that context. Delete this banner once both are done.
+**Last updated:** 2026-08-28 19:57 EDT (Open Item #12 -- launch-blocking iframe-embed cookie bug -- fully resolved: fixed, deployed, and verified in a real cross-site iframe. The tool has a custom domain, `https://k1x-pmtc.geniusdrive.com/`, added by Tristen 2026-08-28; see CLAUDE_problems.md P050 and `infra/lib/domain-stack.ts`.)
 
 ---
 

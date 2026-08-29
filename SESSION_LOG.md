@@ -459,3 +459,13 @@ Wireframe and design-system work happened across this project before this log wa
 - `check_files.sh` now passes end to end (all sections, including the route smoke test that was blocked all session by the missing `flask` module).
 - Updated `CLAUDE.md`'s banner and header, and `PROJECT_STATE.md`'s Open Item #12, to reflect: fixed in code and verified, **not yet deployed**. Two things remain before this is actually safe to launch: (1) `cdk deploy PmtcApp`, (2) the real cross-site-iframe check `AFTER_YOU_PULL.md` section 3 describes -- a `Set-Cookie` header proves the config took effect, it does not prove a real browser accepts a third-party cookie in that context (some browsers block third-party cookies by default regardless).
 - Not yet committed.
+
+### 2026-08-28 19:55 EDT
+- Ben committed/pushed (`2d2adf3`) and deployed the cookie fix: `npx cdk deploy PmtcApp`, 17.12s deploy, 47.17s total, same stack ARN and `AppUrl` as every prior code-only redeploy. Open Item #12's fix is now live at both the bare Function URL and the custom domain (CloudFront points at the same Lambda).
+- Created `iframe_embed_test.html` in the project root (one level up from `Application/`, deliberately outside the git repo -- a throwaway test file, not a project deliverable) at Ben's request: a minimal page embedding `https://k1x-pmtc.geniusdrive.com/` in an iframe, so opening it from a local `file://` origin reproduces the real cross-site condition of the K1x embed. Instructions inline: click through Profile -> Assessment -> Results inside the frame; reaching Results confirms the fix holds in a real browser, not just in a response header.
+- Still open: Ben running that real test is the last verification step before Open Item #12 can close out for good.
+
+### 2026-08-28 19:57 EDT
+- Ben: "iframe site test all good" -- confirmed Profile -> Assessment -> Results all work inside `iframe_embed_test.html`'s cross-site frame. Open Item #12 (the launch-blocking session-cookie bug Tristen's session flagged) is now fully closed: fixed in code, committed, deployed, and verified in the actual scenario it protects against, not just via a response header.
+- Closed out CLAUDE.md's `AFTER_YOU_PULL.md` banner per its own instruction ("delete once both are done") -- replaced with a one-line note in the header pointing at the custom domain and P050 for anyone who needs the history.
+- Nothing else open from today's launch-readiness work. Remaining open items are all pre-existing and unrelated: `klutetr/new-domain`'s branch itself (now merged, nothing further needed), Q3 (email delivery), the Output Report mockup wiring (Open Item #2/P051), no PPTX/report send yet, and Open Item #13 (page compression, performance-only).
