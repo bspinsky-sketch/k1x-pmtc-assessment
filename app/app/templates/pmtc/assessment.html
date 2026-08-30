@@ -302,6 +302,54 @@ a{color:inherit;}
    that would revive the low-contrast-against-background issue §16 fixed. */
 .sseg-tick{color:var(--slate);}
 .sseg-tick[data-on="true"]{color:var(--ink);font-weight:700;}
+
+/* numeral tick row (mobile) -- always rendered by the component, hidden on
+   desktop by default via the media query below; the word-tick row above
+   this stays exactly as it is on desktop. */
+.sseg-ticks-num{margin:7px 0 0;display:none;gap:var(--sseg-seg-gap);grid-template-columns:repeat(var(--sseg-count),1fr);}
+.sseg-ticks-num .sseg-tick{font-weight:600;}
+
+/* Floating badge (mobile) -- names whichever segment is currently selected.
+   Positioned by index/count math against the same even grid the segments
+   use, so it tracks correctly at any width with no JS pixel measurement or
+   resize listener. clamp() keeps it from overhanging the row at either end
+   (segment 0 or the last segment) -- the 64px bound is sized to the widest
+   level name ("Standardized"/"Autonomous") at this font size/padding.
+   White (--paper) so it lifts off this page's own --bone background --
+   there is no white card behind a capability row (see .goal-card), so a
+   --bone badge would blend straight into it. Gold band (--signal) + olive
+   text (--sseg-accent-ink) reuse the exact accent pairing already used
+   elsewhere on this page for "this is the selected one" -- the breadcrumb's
+   current-step pill (.bc-step.current) and this component's own .sseg-name
+   -- so it reads as native rather than a new color introduced just for
+   this. Only shown once answered ([data-set="true"]) and only on mobile. */
+.sseg-badge-float{
+  position:absolute; bottom:100%; margin-bottom:12px;
+  left: clamp(64px, calc((var(--sseg-active-index, 0) + .5) / var(--sseg-count) * 100%), calc(100% - 64px));
+  transform: translateX(-50%);
+  display:none;
+  background:var(--paper); border-bottom:3px solid var(--signal);
+  padding:6px 16px; white-space:nowrap;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+.sseg-badge-float span{
+  font-family:var(--sseg-cond); font-weight:700; font-size:12px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--sseg-accent-ink);
+}
+
+/* Mobile-only: the six-word tick row runs its words into each other below
+   ~760px (too many long words for the available column width) -- see
+   SESSION_LOG.md/PROJECT_STATE.md Open Item for the full writeup. Swap to
+   numerals (which always fit) plus the floating badge above, instead of
+   showing all six words. Desktop is untouched -- word ticks, no badge. */
+@media (max-width:760px){
+  .sseg-ticks{display:none;}
+  .sseg-ticks-num{display:grid;}
+  .sseg[data-set="true"] .sseg-badge-float{display:block;}
+  /* extra clearance above the bar so the badge never crowds the question
+     text sitting above it -- only needed once a badge can actually appear */
+  .sseg-wrap{margin-top:48px;}
+}
 </style>
 </head>
 <body>
@@ -556,10 +604,16 @@ a{color:inherit;}
                    min="0" max="${this.count - 1}" step="1" value="0"
                    aria-label="${esc(o.ariaLabel)}">
             <div class="sseg-segs" data-part="segs" aria-hidden="true">${segs}</div>
+            <div class="sseg-badge-float" data-part="badgefloat" aria-hidden="true">
+              <span data-part="badgetext"></span>
+            </div>
           </div>
           ${tickLabels ? `<p class="sseg-ticks" data-part="ticks" aria-hidden="true">${
             tickLabels.map((t) => `<span class="sseg-tick">${esc(t)}</span>`).join('')
           }</p>` : ''}
+          <p class="sseg-ticks-num" data-part="ticksnum" aria-hidden="true">${
+            this.numerals.map((n) => `<span class="sseg-tick">${esc(String(n))}</span>`).join('')
+          }</p>
           ${o.ends ? `<p class="sseg-ends" aria-hidden="true">
             <span>${esc(o.segments[0])}</span>
             <span>${esc(o.segments[this.count - 1])}</span>
@@ -575,6 +629,8 @@ a{color:inherit;}
       this.parts = {
         said: part('said'), num: part('num'), name: part('name'),
         segs: part('segs'), ticks: part('ticks'), read: part('read'),
+        ticksnum: part('ticksnum'), badgefloat: part('badgefloat'),
+        badgetext: part('badgetext'),
       };
     }
 
@@ -608,6 +664,18 @@ a{color:inherit;}
         Array.from(this.parts.ticks.children).forEach((tick, i) => {
           tick.dataset.on = set && i === at ? 'true' : 'false';
         });
+      if (this.parts.ticksnum)
+        Array.from(this.parts.ticksnum.children).forEach((tick, i) => {
+          tick.dataset.on = set && i === at ? 'true' : 'false';
+        });
+      // Floating badge (mobile only, see CSS): names whichever segment is
+      // selected, positioned purely by index/count math against the same
+      // even grid the segments already use -- no pixel measurement or
+      // resize listener needed, so it stays aligned at any width.
+      if (this.parts.badgefloat) {
+        this.el.style.setProperty('--sseg-active-index', String(set ? at : 0));
+        if (this.parts.badgetext) this.parts.badgetext.textContent = label;
+      }
 
       for (const button of this.el.querySelectorAll('.sseg-btn')) {
         const dir = +button.dataset.step;

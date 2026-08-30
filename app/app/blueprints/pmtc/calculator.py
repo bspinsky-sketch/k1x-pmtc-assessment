@@ -17,6 +17,7 @@ confirmed the PPTX report template does not exist yet (PROJECT_STATE.md
 Open Item #2). Wire it in when the report-generation phase starts.
 """
 
+from math import ceil
 from decimal import Decimal, ROUND_HALF_UP
 from statistics import mean
 
@@ -117,34 +118,28 @@ WEIGHT_COEFFICIENTS = {
     "governance_trust": {"accuracy": 2, "client_experience": 2},
 }
 
-# Peer scores: Data!D84:E96, the column literally headed "PEER LEADERS" --
-# this, not the differently-shaped "Peer Comparison Data" table at
-# Data!B27:G39 (see PEER_COUNTS below), is what the live workbook's own
-# Results!F7 (named range R_peerScore, the number shown under the score
-# ring) actually computes from -- its formula is =Data!E97, the average of
-# this column's 10 active rows. Found and fixed 2026-08-28 (CLAUDE_problems.md
-# P047): an earlier port used Data!B27:G39 for both peer count AND
-# per-capability peer score, but B27:G39's per-capability columns
-# (rows 28-39) are never actually referenced by any formula anywhere in
-# the workbook -- only its row 40 (Peer Count) is, via Results!F9's
-# HLOOKUP. B27:G39's per-capability numbers are vestigial/unused in the
-# real model. Re-verified against Ben's 2026-08-28 refreshed workbook --
-# this column is unchanged from the version this was first ported from.
-# Like B27:G39, this column has no per-industry breakdown (one column,
-# not five) -- so, same as before the fix, every industry currently shows
-# the same peer benchmark; that's a real characteristic of the source
-# data, not a shortcut taken here.
+# Peer scores: originally ported from Data!D84:E96 ("PEER LEADERS" column,
+# averaged at Data!E97 -- see CLAUDE_problems.md P047 for why this column,
+# not the differently-shaped Data!B27:G39, is the real source). Refreshed
+# 2026-08-30 with updated figures Ben supplied directly (a screenshot of
+# the same "Capability & Maturity Score" / "PEER LEADERS" column, values
+# unchanged in shape from the original table, only the numbers updated).
+# Mean of these 10 values is 4.23, which rounds to the 4.2 shown on Ben's
+# source -- confirms the numbers were transcribed correctly. Still a single
+# flat column with no per-industry breakdown, same as before this refresh
+# -- that remains a real characteristic of the source data, not a shortcut
+# taken here.
 PEER_SCORES = {
-    "document_intake": 3.5,
-    "inventory_management": 3.2,
-    "data_extraction": 3.3,
-    "data_validation": 2.3,
-    "data_review": 2.1,
-    "tax_analysis_reporting": 2.8,
-    "integration": 2.2,
-    "resource_structure": 2.1,
-    "advisory": 1.8,
-    "governance_trust": 2.2,
+    "document_intake": 5.0,
+    "inventory_management": 5.0,
+    "data_extraction": 5.0,
+    "data_validation": 4.0,
+    "data_review": 3.7,
+    "tax_analysis_reporting": 4.9,
+    "integration": 3.9,
+    "resource_structure": 3.7,
+    "advisory": 3.2,
+    "governance_trust": 3.9,
 }
 PEER_SCORES_BY_INDUSTRY = {industry: dict(PEER_SCORES) for industry in INDUSTRIES}
 
@@ -203,8 +198,20 @@ ARCHETYPE_BANDS = [
 ]
 
 # Maturity-curve "Recommended" mark (assets/DESIGN_DECISIONS.md §34; see the
-# curve script in results.html) is a fixed target, not computed from input.
-RECOMMENDED_TARGET = 3.6
+# curve script in results.html). Was a fixed 3.6 for every visitor; Ben's
+# 2026-08-30 direction replaces that with a formula off the visitor's own
+# "Your Score": round the score UP to the next whole level, then add one
+# full point, with a floor of 3 (nobody is ever told to aim lower than
+# "Standardized") and a ceiling of 5 (the top of the 0-5 scale itself --
+# not covered by Ben's own examples, since none of them land above 4, but
+# without a cap someone already scoring 4.2+ would get a target past the
+# chart's own right edge; confirmed with Ben before adding it). Examples
+# Ben gave to confirm the shape of the formula: 2.6 -> 4, 1.3 -> 3, 3.2 -> 5.
+MAX_LEVEL = 5
+
+
+def recommended_target(your_score):
+    return min(MAX_LEVEL, max(3, ceil(your_score) + 1))
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +328,7 @@ def run_calculation(company, industry, goals, ratings):
         "strengths": strengths,
         "gaps": gaps,
         "bar_rows": bar_rows,
-        "curve": {"now": your_score, "target": RECOMMENDED_TARGET, "peer": peer_score},
+        "curve": {"now": your_score, "target": recommended_target(your_score), "peer": peer_score},
         "capability_scores": scores,
         "strength_rank": strength_rank,
         "gap_rank": gap_rank,
