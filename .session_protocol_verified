@@ -8,3 +8,13 @@
 2026-08-28 04:24 UTC -- STANDING_RULES.md read (full)
 2026-08-28 04:24 UTC -- CLAUDE_problems.md read (full, 3 chunks, all 885 lines)
 2026-08-28 04:24 UTC -- protocol complete, compaction event handled
+2026-08-29 23:23 EDT -- CLAUDE.md read (full, this session)
+2026-08-29 23:23 EDT -- PROJECT_STATE.md read (full, this session)
+2026-08-29 23:23 EDT -- STANDING_RULES.md read (full, this session)
+2026-08-29 23:23 EDT -- CLAUDE_problems.md read (scanned for relevant patterns: P025/P026/P031-033/P038 file-writing, P039/P040 compaction, P053 picker/em-dash; new entry P054 added for this turn's recurrence)
+2026-08-29 23:23 EDT -- protocol complete, compaction event handled, page 9-11 lock-in and page 12 hero-stat sourcing verified against live device files
+2026-08-30 01:00 EDT -- CLAUDE.md read (full, this session)
+2026-08-30 01:00 EDT -- PROJECT_STATE.md read (full, this session)
+2026-08-30 01:00 EDT -- STANDING_RULES.md read (full, this session)
+2026-08-30 01:00 EDT -- CLAUDE_problems.md read (full, all 1075 lines, this session)
+2026-08-30 01:00 EDT -- protocol complete, compaction event handled per Ben's "Stop - compaction event"

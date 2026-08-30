@@ -1,0 +1,176 @@
+{
+  "company": "Test Scenario 3",
+  "industry": "Tax Exempt / Non-Profit",
+  "goals": {
+    "reduce_time": 4,
+    "standardize": 0,
+    "scalable_growth": 4,
+    "accuracy": 0,
+    "client_experience": 4,
+    "advisory_services": 0
+  },
+  "ratings": {
+    "document_intake": 5,
+    "inventory_management": 0,
+    "data_extraction": 5,
+    "data_validation": 0,
+    "data_review": 5,
+    "tax_analysis_reporting": 0,
+    "integration": 5,
+    "resource_structure": 0,
+    "advisory": 5,
+    "governance_trust": 0
+  },
+  "result": {
+    "company": "Test Scenario 3",
+    "industry": "Tax Exempt / Non-Profit",
+    "your_score": 2.5,
+    "peer_score": 2.6,
+    "peer_count": 111,
+    "band_name": "Standardizing and Scaling",
+    "band_subtitle": "(Value is Protected)",
+    "narrative": "Process now exists where habit used to run things, with checklists and defined steps covering K-1s and adjacent tax work alike. That structure protects accuracy and makes the busy season repeatable rather than reinvented each year. The ceiling is effort, though: doing more still means adding people, not leverage.",
+    "narrative_sentences": [
+      "Process now exists where habit used to run things, with checklists and defined steps covering K-1s and adjacent tax work alike.",
+      "That structure protects accuracy and makes the busy season repeatable rather than reinvented each year.",
+      "The ceiling is effort, though: doing more still means adding people, not leverage."
+    ],
+    "strengths": [
+      {
+        "key": "document_intake",
+        "name": "Document Intake",
+        "score": 5
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "score": 5
+      },
+      {
+        "key": "data_review",
+        "name": "Data Review",
+        "score": 5
+      }
+    ],
+    "gaps": [
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "delta": 1.7
+      },
+      {
+        "key": "governance_trust",
+        "name": "Governance & Trust",
+        "delta": -2.2
+      },
+      {
+        "key": "resource_structure",
+        "name": "Resource Structure",
+        "delta": -2.1
+      }
+    ],
+    "bar_rows": [
+      {
+        "key": "document_intake",
+        "name": "Document Intake",
+        "you": 5,
+        "peer": 3.5
+      },
+      {
+        "key": "inventory_management",
+        "name": "Inventory Management",
+        "you": 0,
+        "peer": 3.2
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "you": 5,
+        "peer": 3.3
+      },
+      {
+        "key": "data_validation",
+        "name": "Data Validation",
+        "you": 0,
+        "peer": 2.3
+      },
+      {
+        "key": "data_review",
+        "name": "Data Review",
+        "you": 5,
+        "peer": 2.1
+      },
+      {
+        "key": "tax_analysis_reporting",
+        "name": "Tax Analysis & Reporting",
+        "you": 0,
+        "peer": 2.8
+      },
+      {
+        "key": "integration",
+        "name": "Integration",
+        "you": 5,
+        "peer": 2.2
+      },
+      {
+        "key": "resource_structure",
+        "name": "Resource Structure",
+        "you": 0,
+        "peer": 2.1
+      },
+      {
+        "key": "advisory",
+        "name": "Advisory",
+        "you": 5,
+        "peer": 1.8
+      },
+      {
+        "key": "governance_trust",
+        "name": "Governance & Trust",
+        "you": 0,
+        "peer": 2.2
+      }
+    ],
+    "curve": {
+      "now": 2.5,
+      "target": 3.6,
+      "peer": 2.6
+    },
+    "capability_scores": {
+      "document_intake": 5,
+      "inventory_management": 0,
+      "data_extraction": 5,
+      "data_validation": 0,
+      "data_review": 5,
+      "tax_analysis_reporting": 0,
+      "integration": 5,
+      "resource_structure": 0,
+      "advisory": 5,
+      "governance_trust": 0
+    },
+    "strength_rank": {
+      "document_intake": 1,
+      "data_extraction": 2,
+      "data_review": 3,
+      "integration": 4,
+      "advisory": 5,
+      "inventory_management": 6,
+      "data_validation": 7,
+      "tax_analysis_reporting": 8,
+      "resource_structure": 9,
+      "governance_trust": 10
+    },
+    "gap_rank": {
+      "data_extraction": 1,
+      "governance_trust": 2,
+      "resource_structure": 3,
+      "integration": 4,
+      "tax_analysis_reporting": 5,
+      "data_validation": 6,
+      "data_review": 7,
+      "inventory_management": 8,
+      "document_intake": 9,
+      "advisory": 10
+    }
+  }
+}

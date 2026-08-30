@@ -115,6 +115,7 @@ This exists so a lesson learned on one project doesn't have to be rediscovered o
   ```
 - **Every git push and Cloud Run deploy must be timestamped in the Authoritative Source Registry** in PROJECT_STATE.md.
 - If a bad commit lands from a sandbox git attempt: `git reset HEAD~1` from local machine before pushing.
+- **Don't propose a commit after every individual page/section of a multi-part deliverable** (a multi-page report, a multi-file build). Keep building and saving to the working directory across the whole batch; only bring up committing at a natural checkpoint (a batch done, a session ending) or when Ben asks for it. Asking after each small unit is exactly the kind of thing that stops being helpful and starts being noise on a 12-20 page job.
 
 ---
 

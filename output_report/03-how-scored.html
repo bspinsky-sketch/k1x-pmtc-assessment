@@ -1,0 +1,277 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- How This Is Scored</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+:root{
+  --signal:#F5D000; --slate-light:#C4CBCC;
+  --score-info: oklch(0.62 0.13 255);
+  --navy-deep:#061627; --curve-cyan:#00A3E0;
+}
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background-image:url('assets/picture1.png'); background-size:cover; background-position:center;
+  font-family:'Outfit', sans-serif;
+  padding:44px 64px;
+  color:#fff;
+}
+.h1 { font-weight:700; font-size:26px; line-height:1.08; letter-spacing:-0.02em; color:#FFFFFF; margin-bottom:6px; }
+.lede { font-weight:400; font-size:13.5px; line-height:1.4; color:rgba(255,255,255,.78); margin-bottom:16px; }
+
+/* ---- curve card ---- */
+.curve-card { background:linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.22); border-radius:12px; padding:16px 10px 4px; margin-bottom:14px; }
+.model-track { width:1132px; margin:0 auto; }
+.curve-svg { display:block; width:100%; height:auto; overflow:visible; }
+.curve-axis { stroke:rgba(255,255,255,.28); stroke-width:1; }
+.curve-line { stroke:var(--curve-cyan); stroke-width:var(--curve-stroke,4px); stroke-linecap:round; }
+.curve-tick line { stroke:rgba(255,255,255,.28); stroke-width:1; }
+.curve-tick-name { fill:rgba(255,255,255,.55); font-family:'Outfit',sans-serif; font-weight:500;
+  font-size:var(--curve-label,10px); letter-spacing:.02em; transform:translateY(1.9em); }
+.curve-tick-n { fill:rgba(255,255,255,.55); font-family:'Outfit',sans-serif; font-weight:500;
+  font-size:var(--curve-label,10px); letter-spacing:.02em; transform:translateY(3.15em); }
+.curve-mark circle { fill:var(--signal); stroke:var(--navy-deep);
+  r:var(--curve-dot,7px); stroke-width:var(--curve-stroke,4px); }
+.curve-mark[data-mark="target"] circle { fill:#0A0A0A; stroke:var(--signal); }
+.curve-mark[data-mark="peer"] circle { fill:var(--score-info); stroke:var(--navy-deep); r:calc(var(--curve-dot,7px) * .85); }
+.curve-mark text { fill:#fff; font-family:'Outfit',sans-serif; font-weight:600;
+  font-size:var(--curve-label,10px); letter-spacing:.03em; transform:translateY(-1.1em); }
+.curve-mark[data-mark="peer"] text { transform:translateY(1.85em); fill:rgba(255,255,255,.75); }
+@media screen{
+  [data-marks="bare"] .curve-mark text{display:none;}
+  [data-ticks="bare"] .curve-tick-name{display:none;}
+  [data-ticks="bare"] .curve-tick-n{transform:translateY(1.9em);}
+}
+/* ---- zone strip: inset to the SAME 7.78% tick margin as the curve above,
+   so each card's left/right edge lands exactly on a curve tick. See
+   DESIGN_NOTES.md Section 8 (object-alignment method) -- here the alignment
+   is baked into matching percentages rather than measured after the fact,
+   since both the curve's tick positions and this grid are under our own
+   control (no independent "guess the edge" step needed). */
+.zone-track { width:1132px; margin:0 auto; box-sizing:border-box; }
+.zone-strip { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; }
+.zone-card { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.22); border-radius:9px;
+  padding:10px 11px 11px; box-sizing:border-box; }
+.zone-name { font-weight:700; font-size:13px; line-height:1.2; color:#fff; margin-bottom:3px; }
+.zone-sub { font-size:10.3px; font-weight:600; color:var(--slate-light); margin-bottom:7px; }
+.zone-sub .zone-range-inline { font-weight:400; color:rgba(255,255,255,.5); }
+.zone-narrative { font-size:10.1px; line-height:1.35; color:rgba(255,255,255,.78); }
+.zone-card.active { background:linear-gradient(rgba(245,208,0,.14), rgba(245,208,0,.14)), rgba(255,255,255,.07);
+  border:1.5px solid var(--signal); box-shadow:0 0 0 1px rgba(245,208,0,.25), 0 0 16px rgba(245,208,0,.22); }
+/* Cards 4 & 5 sit over the brightest part of the background photo (the cyan/
+   gold swirl in the upper right), where the plain rgba(255,255,255,.07) tint
+   doesn't hold up -- same scrim technique used on page 6's score/peer boxes:
+   a dark layer between the photo and the card's own tint, applied only where
+   the background actually needs it rather than on every card. */
+.zone-card-scrim { background:linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07); }
+.zone-card.active.zone-card-scrim { background:linear-gradient(rgba(245,208,0,.16), rgba(245,208,0,.16)), linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07); }
+.zone-tag { display:inline-block; margin-top:6px; font-family:'Outfit',sans-serif; font-weight:700; font-size:9.5px;
+  letter-spacing:.05em; text-transform:uppercase; color:#0A0A0A; background:var(--signal); border-radius:4px; padding:2px 6px; }
+</style></head>
+<body>
+<div class="page">
+  <div class="h1">How this is scored</div>
+  <div class="lede">Every capability is scored 0 to 5, None through Autonomous. Your overall score is the average across all ten, and that average lands you in one of five maturity zones.</div>
+
+  <div class="curve-card">
+    <div class="model-track">
+      <svg class="curve-svg" id="curveSvg" viewBox="0 0 758 200" preserveAspectRatio="xMinYMid meet" aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <div class="zone-track">
+    <div class="zone-strip">
+      <div class="zone-card">
+        <div class="zone-name">Stuck in the Blocks</div>
+        <div class="zone-sub">Value is Unrealized <span class="zone-range-inline">(0&ndash;1)</span></div>
+        <div class="zone-narrative">Nothing here is measured, so nothing here can be improved. Work moves by memory and habit rather than process, whether it's K-1s, other tax filings, or the reporting layered on top of them. Automation hasn't been tried yet, so there's no baseline to compare against and no case yet made for change.</div>
+      </div>
+      <div class="zone-card active">
+        <div class="zone-name">Automating the Foundation</div>
+        <div class="zone-sub">Value is at Risk <span class="zone-range-inline">(1&ndash;2)</span></div>
+        <div class="zone-narrative">The basics are in place, but they still run on manual effort. Collection, entry, and review depend on specific people doing specific things by hand, across K-1s and the other filings that share the same season. That's fragile: a busy week, a departure, or a missed handoff is enough to put accuracy or a deadline at risk.</div>
+        <div class="zone-tag">You are here &middot; 1.8</div>
+      </div>
+      <div class="zone-card">
+        <div class="zone-name">Standardizing and Scaling</div>
+        <div class="zone-sub">Value is Protected <span class="zone-range-inline">(2&ndash;3)</span></div>
+        <div class="zone-narrative">Process now exists where habit used to run things, with checklists and defined steps covering K-1s and adjacent tax work alike. That structure protects accuracy and makes the busy season repeatable rather than reinvented each year. The ceiling is effort, though: doing more still means adding people, not leverage.</div>
+      </div>
+      <div class="zone-card zone-card-scrim">
+        <div class="zone-name">Transforming the Workflow</div>
+        <div class="zone-sub">Value is Accelerating <span class="zone-range-inline">(3&ndash;4)</span></div>
+        <div class="zone-narrative">Automation is doing real work now, not just supporting it, and the effect compounds across whatever tax and compliance tasks run through it. Cycle time keeps shrinking as fewer steps need a person, and the team is starting to spend time on judgment instead of entry. Confidence in the numbers is rising along with the speed.</div>
+      </div>
+      <div class="zone-card zone-card-scrim">
+        <div class="zone-name">Optimizing Capabilities</div>
+        <div class="zone-sub">Value is Compounding <span class="zone-range-inline">(4&ndash;5)</span></div>
+        <div class="zone-narrative">Data flows on its own, and the team's attention has shifted from producing it to using it, across K-1s, other filings, and whatever comes next. Each season builds on the last instead of starting over, and the operation runs on evidence rather than heroics. That headroom is what turns compliance work into an advisory practice.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>03</span>
+  </div>
+</div>
+<script>
+(function(){
+  /* CURVE.left/right widened from the source component's 48/572 (out of a
+     620-unit-wide viewBox) to 59/699 (out of a 758-unit-wide viewBox) --
+     same proportional inset (7.78% each side), just more units end to end,
+     so the six ticks land further apart physically. CURVE.top/bottom are
+     UNTOUCHED (18/146, same as the live app) -- this is the whole point:
+     widen the x-axis without touching the y-axis. VBW (620 in the source
+     component) becomes 758 throughout fit() so toUnits keeps producing the
+     exact same physical stroke/dot/label sizes at the new, wider render
+     width -- see the discussion in SESSION_LOG.md before building this. */
+  /* Scale factor k applied uniformly to the reference component's viewBox
+     width AND its two x-positions (never to CURVE.top/bottom) -- this is
+     what "widen the x-axis without touching the y-axis" means in code:
+     everything that governs horizontal placement scales by k, everything
+     that governs vertical placement doesn't move. Computed from the exact
+     source constants rather than hand-rounded, so there's no accumulated
+     rounding error to chase later when the zone strip is measured against
+     it below. */
+  var REF_WIDTH = 900, REF_VBW = 620, REF_LEFT = 48, REF_RIGHT = 572;
+  var TARGET_WIDTH = 1132;
+  var k = TARGET_WIDTH / REF_WIDTH;
+  var VBW = REF_VBW * k;
+  var CURVE = { left: REF_LEFT * k, right: REF_RIGHT * k, top: 18, bottom: 146 };
+  var LABEL_PX = 12, STROKE_PX = 4, DOT_PX = 7;
+  var MARKS_MIN = 842, TICKS_MIN = 620;
+  var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var doublingHeight = function(level, top){ return (Math.pow(2, level) - 1) / (Math.pow(2, top) - 1); };
+
+  function curveSlopes(points){
+    var secants = points.slice(1).map(function(p, i){ return (p.y - points[i].y) / (p.x - points[i].x); });
+    var m = points.map(function(p, i){
+      return i === 0 ? secants[0]
+        : i === points.length - 1 ? secants[secants.length - 1]
+        : (secants[i - 1] + secants[i]) / 2;
+    });
+    secants.forEach(function(d, i){
+      if (d === 0) { m[i] = 0; m[i + 1] = 0; return; }
+      var a = m[i] / d, b = m[i + 1] / d;
+      var sq = a * a + b * b;
+      if (sq > 9) {
+        var scale = 3 / Math.sqrt(sq);
+        m[i] = scale * a * d; m[i + 1] = scale * b * d;
+      }
+    });
+    return m;
+  }
+  function curvePath(points){
+    var m = curveSlopes(points);
+    var r = function(n){ return Number(n.toFixed(2)); };
+    return points.map(function(p, i){
+      if (i === 0) return 'M' + r(p.x) + ' ' + r(p.y);
+      var from = points[i - 1];
+      var third = (p.x - from.x) / 3;
+      return 'C' + r(from.x + third) + ' ' + r(from.y + m[i - 1] * third) + ' '
+        + r(p.x - third) + ' ' + r(p.y - m[i] * third) + ' ' + r(p.x) + ' ' + r(p.y);
+    }).join(' ');
+  }
+  function curveAt(points, at){
+    var m = curveSlopes(points);
+    var i = Math.min(Math.max(Math.floor(at), 0), points.length - 2);
+    var t = at - i;
+    var a = points[i], b = points[i + 1];
+    var run = b.x - a.x;
+    return {
+      x: a.x + run * t,
+      y: a.y * Math.pow(1 - t, 2) * (1 + 2 * t) + b.y * t * t * (3 - 2 * t)
+        + run * m[i] * t * Math.pow(1 - t, 2) - run * m[i + 1] * t * t * (1 - t)
+    };
+  }
+
+  function curveChart(svg, opts){
+    var stages = opts.stages, height = opts.height || doublingHeight, labels = opts.labels;
+    var top = stages.length - 1;
+    var step = (CURVE.right - CURVE.left) / top;
+    var points = stages.map(function(name, i){
+      return { level: i, name: name, x: CURVE.left + i * step,
+        y: CURVE.bottom - height(i, top) * (CURVE.bottom - CURVE.top) };
+    });
+    var fitAt = 0;
+    function fit(){
+      var width = Math.round(svg.getBoundingClientRect().width);
+      if (!width || width === fitAt) return;
+      fitAt = width;
+      var toUnits = VBW / width;
+      var label = LABEL_PX * toUnits;
+      svg.style.setProperty('--curve-label', label.toFixed(2) + 'px');
+      svg.style.setProperty('--curve-stroke', (STROKE_PX * toUnits).toFixed(2) + 'px');
+      svg.style.setProperty('--curve-dot', (DOT_PX * toUnits).toFixed(2) + 'px');
+      var named = width >= MARKS_MIN;
+      svg.dataset.marks = named ? 'named' : 'bare';
+      var levelled = width >= TICKS_MIN;
+      svg.dataset.ticks = levelled ? 'named' : 'bare';
+      var t = Math.min(0, CURVE.top - Math.max(named ? 1.82 * label : 0, 11) - 2);
+      var b = Math.max(180, CURVE.bottom + (levelled ? 2.2 : 2.4) * label);
+      svg.setAttribute('viewBox', '0 ' + t.toFixed(1) + ' ' + VBW + ' ' + (b - t).toFixed(1));
+    }
+    var anchor = function(p){
+      return p.x > CURVE.right - 70 ? 'end' : p.x < CURVE.left + 70 ? 'start' : 'middle';
+    };
+    function render(state){
+      var marks = [];
+      ['now', 'target', 'peer'].forEach(function(key){
+        var v = state[key];
+        if (v === null || v === undefined) return;
+        var pos = curveAt(points, v);
+        pos.mark = key;
+        pos.text = labels[key];
+        marks.push(pos);
+      });
+
+      svg.innerHTML =
+        '<line class="curve-axis" x1="' + CURVE.left + '" y1="' + CURVE.bottom + '" x2="' + CURVE.right + '" y2="' + CURVE.bottom + '"></line>' +
+        '<path class="curve-line" d="' + curvePath(points) + '" fill="none"></path>' +
+        points.map(function(p){
+          return '<g class="curve-tick" data-level="' + p.level + '">' +
+            '<line x1="' + p.x + '" y1="' + CURVE.bottom + '" x2="' + p.x + '" y2="' + (CURVE.bottom + 6) + '"></line>' +
+            '<text class="curve-tick-n" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">(' + p.level + ')</text>' +
+            '<text class="curve-tick-name" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">' + esc(p.name) + '</text>' +
+            '</g>';
+        }).join('') +
+        marks.map(function(p){
+          return '<g class="curve-mark" data-mark="' + p.mark + '">' +
+            '<circle cx="' + p.x.toFixed(2) + '" cy="' + p.y.toFixed(2) + '"></circle>' +
+            '<text x="' + p.x.toFixed(2) + '" y="' + p.y.toFixed(2) + '" text-anchor="' + anchor(p) + '">' + esc(p.text) + '</text>' +
+            '</g>';
+        }).join('');
+      fit();
+    }
+    if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(svg.parentElement);
+    window.addEventListener('resize', fit);
+    return { render: render, fit: fit };
+  }
+
+  var chart = curveChart(document.getElementById('curveSvg'), {
+    stages: ['None', 'Ad-Hoc', 'Standardized', 'Automated', 'Integrated', 'Autonomous'],
+    labels: { now: 'Your Score', target: 'Recommended', peer: 'Peer Leaders' }
+  });
+  chart.render({ now: 1.8, target: 3.6, peer: 2.6 });
+
+  /* Snap the zone strip's left/right inset to the curve's actual rendered
+     tick0/tick5 positions rather than a hand-computed percentage -- this is
+     the project's usual "measure, don't guess" alignment method
+     (DESIGN_NOTES.md Section 8), applied here in code instead of by eye
+     with Playwright afterward, so it's exact on first render and stays
+     exact if TARGET_WIDTH above ever changes. */
+  var svgEl = document.getElementById('curveSvg');
+  var zoneTrack = document.querySelector('.zone-track');
+  var svgRect = svgEl.getBoundingClientRect();
+  var vb = svgEl.viewBox.baseVal;
+  var pxPerUnit = svgRect.width / vb.width;
+  var tick0X = svgRect.left + (CURVE.left - vb.x) * pxPerUnit;
+  var tick5X = svgRect.left + (CURVE.right - vb.x) * pxPerUnit;
+  var trackRect = zoneTrack.getBoundingClientRect();
+  zoneTrack.style.paddingLeft = (tick0X - trackRect.left).toFixed(2) + 'px';
+  zoneTrack.style.paddingRight = (trackRect.right - tick5X).toFixed(2) + 'px';
+})();
+</script>
+</body></html>

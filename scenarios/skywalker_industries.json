@@ -1,0 +1,176 @@
+{
+  "company": "Skywalker Industries, LLC",
+  "industry": "Fund",
+  "goals": {
+    "reduce_time": 4,
+    "standardize": 3,
+    "scalable_growth": 2,
+    "accuracy": 4,
+    "client_experience": 2,
+    "advisory_services": 3
+  },
+  "ratings": {
+    "document_intake": 3,
+    "inventory_management": 3,
+    "data_extraction": 2,
+    "data_validation": 2,
+    "data_review": 1,
+    "tax_analysis_reporting": 2,
+    "integration": 1,
+    "resource_structure": 2,
+    "advisory": 1,
+    "governance_trust": 1
+  },
+  "result": {
+    "company": "Skywalker Industries, LLC",
+    "industry": "Fund",
+    "your_score": 1.8,
+    "peer_score": 2.6,
+    "peer_count": 54,
+    "band_name": "Automating the Foundation",
+    "band_subtitle": "(Value is at Risk)",
+    "narrative": "The basics are in place, but they still run on manual effort. Collection, entry, and review depend on specific people doing specific things by hand, across K-1s and the other filings that share the same season. That's fragile: a busy week, a departure, or a missed handoff is enough to put accuracy or a deadline at risk.",
+    "narrative_sentences": [
+      "The basics are in place, but they still run on manual effort.",
+      "Collection, entry, and review depend on specific people doing specific things by hand, across K-1s and the other filings that share the same season.",
+      "That's fragile: a busy week, a departure, or a missed handoff is enough to put accuracy or a deadline at risk."
+    ],
+    "strengths": [
+      {
+        "key": "document_intake",
+        "name": "Document Intake",
+        "score": 3
+      },
+      {
+        "key": "inventory_management",
+        "name": "Inventory Management",
+        "score": 3
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "score": 2
+      }
+    ],
+    "gaps": [
+      {
+        "key": "governance_trust",
+        "name": "Governance & Trust",
+        "delta": -1.2
+      },
+      {
+        "key": "integration",
+        "name": "Integration",
+        "delta": -1.2
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "delta": -1.3
+      }
+    ],
+    "bar_rows": [
+      {
+        "key": "document_intake",
+        "name": "Document Intake",
+        "you": 3,
+        "peer": 3.5
+      },
+      {
+        "key": "inventory_management",
+        "name": "Inventory Management",
+        "you": 3,
+        "peer": 3.2
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "you": 2,
+        "peer": 3.3
+      },
+      {
+        "key": "data_validation",
+        "name": "Data Validation",
+        "you": 2,
+        "peer": 2.3
+      },
+      {
+        "key": "data_review",
+        "name": "Data Review",
+        "you": 1,
+        "peer": 2.1
+      },
+      {
+        "key": "tax_analysis_reporting",
+        "name": "Tax Analysis & Reporting",
+        "you": 2,
+        "peer": 2.8
+      },
+      {
+        "key": "integration",
+        "name": "Integration",
+        "you": 1,
+        "peer": 2.2
+      },
+      {
+        "key": "resource_structure",
+        "name": "Resource Structure",
+        "you": 2,
+        "peer": 2.1
+      },
+      {
+        "key": "advisory",
+        "name": "Advisory",
+        "you": 1,
+        "peer": 1.8
+      },
+      {
+        "key": "governance_trust",
+        "name": "Governance & Trust",
+        "you": 1,
+        "peer": 2.2
+      }
+    ],
+    "curve": {
+      "now": 1.8,
+      "target": 3.6,
+      "peer": 2.6
+    },
+    "capability_scores": {
+      "document_intake": 3,
+      "inventory_management": 3,
+      "data_extraction": 2,
+      "data_validation": 2,
+      "data_review": 1,
+      "tax_analysis_reporting": 2,
+      "integration": 1,
+      "resource_structure": 2,
+      "advisory": 1,
+      "governance_trust": 1
+    },
+    "strength_rank": {
+      "document_intake": 1,
+      "inventory_management": 2,
+      "data_extraction": 3,
+      "data_validation": 4,
+      "tax_analysis_reporting": 5,
+      "resource_structure": 6,
+      "data_review": 7,
+      "integration": 8,
+      "advisory": 9,
+      "governance_trust": 10
+    },
+    "gap_rank": {
+      "governance_trust": 1,
+      "integration": 2,
+      "data_extraction": 3,
+      "data_validation": 4,
+      "data_review": 5,
+      "advisory": 6,
+      "tax_analysis_reporting": 7,
+      "document_intake": 8,
+      "resource_structure": 9,
+      "inventory_management": 10
+    }
+  }
+}

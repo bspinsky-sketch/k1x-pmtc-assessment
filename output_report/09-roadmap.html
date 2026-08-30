@@ -1,0 +1,148 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- Your Roadmap to the Next Level (3 of 3)</title>
+<link rel="stylesheet" href="assets/base.css">
+<script src="assets/roadmap_data.js"></script>
+<style>
+.page { padding:48px 60px; display:flex; flex-direction:column; z-index:0; }
+.bg-wave{ position:absolute; inset:0; background:url('assets/bg/wave-gold-strong.png') center/cover no-repeat; z-index:-1; pointer-events:none; }
+.header-scrim{ position:absolute; left:0; right:0; top:0; height:230px;
+  background:linear-gradient(to bottom, rgba(255,255,255,.96) 0%, rgba(255,255,255,.9) 55%, rgba(255,255,255,0) 100%);
+  z-index:-1; pointer-events:none; }
+
+.h1 { margin-bottom:6px; }
+.lede { margin-bottom:0; }
+
+
+/* The card row is vertically centered in the space between the lede and
+   the footer, rather than pinned to the top -- content length varies a
+   lot capability to capability (this slide might total 300px, another
+   340px), and centering keeps every slide feeling intentionally composed
+   instead of leaving a slab of dead white space under a lighter slide. */
+.grid-wrap{ flex:1; display:flex; align-items:center; min-height:0; }
+.roadmap-grid{ display:flex; gap:20px; align-items:flex-start; width:100%; }
+
+/* Two-tone card, reusing page 8's own light-gap/dark-fix language: the
+   "where you are" half stays light and neutral, the "next step" half goes
+   solid dark with a gold accent border -- the same treatment already
+   sourced from k1x.io's own card system, not a new palette invented for
+   this page. Answers the "beige, no pop" note the same way page 5's did:
+   borrow a real, already-verified pattern from elsewhere in the deck
+   rather than add color for its own sake. */
+.cap-card{ flex:1; min-width:0; border-radius:10px; overflow:hidden;
+  display:flex; flex-direction:column; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+
+.cap-top{ background:#FFFFFF; border:1px solid #E4E4DF; border-bottom:none; border-radius:10px 10px 0 0; padding:18px 18px 16px; }
+.cap-name{ font-weight:700; font-size:15px; color:#1E1E1E; margin-bottom:7px; line-height:1.18; }
+
+.cap-top-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+.level-pill{ display:inline-block; font-weight:700; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:#1E1E1E; background:var(--panel); border-radius:4px; padding:3px 8px; }
+
+/* Six-dot maturity ladder: one dot per level (None -> Autonomous), filled
+   gold up through the current level, so a reader can place a capability at
+   a glance without reading the pill text. Purely reinforcing -- the pill
+   and description remain the actual source of truth. */
+.level-ladder{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.level-ladder .dot{ width:7px; height:7px; border-radius:50%; background:#E4E4DF; }
+.level-ladder .dot.filled{ background:var(--gold); }
+
+.cap-desc{ font-size:11.5px; line-height:1.48; color:#3A3A36; }
+
+.cap-bottom{ background:#0A0A0A; border-left:2px solid var(--gold); border-radius:0 0 10px 10px; padding:16px 18px 18px; }
+.next-label{ font-weight:700; font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--gold); margin-bottom:9px; }
+.next-list{ list-style:none; margin:0; padding:0; }
+.next-list li{ font-size:11px; line-height:1.46; color:rgba(255,255,255,.88); margin-bottom:8px; padding-left:12px; position:relative; }
+.next-list li::before{ content:'\2013'; position:absolute; left:0; color:var(--gold); font-weight:700; }
+.next-list li:last-child{ margin-bottom:0; }
+.sustain-text{ font-size:11.2px; line-height:1.5; color:rgba(255,255,255,.82); }
+</style></head>
+<body>
+<div class="page">
+  <div class="bg-wave"></div>
+  <div class="header-scrim"></div>
+  <div class="h1">Your Roadmap to the Next Level (3 of 3)</div>
+  <div class="lede">For each capability, where you stand today and the specific next steps to move up &ndash; based on your self-assessment.</div>
+
+  <div class="grid-wrap"><div class="roadmap-grid" id="grid"></div></div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>09</span>
+  </div>
+</div>
+<script>
+(function(){
+  // Per-session instance data -- swap this object for the live app's real
+  // Assessment!N9:N18 capability levels (0-5) and every description/advice
+  // lookup below re-renders correctly for that user's actual session, full
+  // text, no other code change. See CURRENT_DESCRIPTIONS/NEXT_STEP_ADVICE
+  // in assets/roadmap_data.js for the master lookup tables this joins
+  // against (sourced from Assessment!G9:L18 and Data!C69:H78).
+  var CAPABILITY_LEVELS = {'document_intake': 3, 'inventory_management': 3, 'data_extraction': 2, 'data_validation': 2, 'data_review': 1, 'tax_analysis_reporting': 2, 'integration': 1, 'resource_structure': 2, 'advisory': 1, 'governance_trust': 1};
+  var SLIDE_KEYS = ["resource_structure", "advisory", "governance_trust"];
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  function renderCard(key){
+    var level = CAPABILITY_LEVELS[key];
+    var desc = CURRENT_DESCRIPTIONS[key];
+    var adv = NEXT_STEP_ADVICE[key];
+    var levelLabel = LEVEL_LABELS[level];
+    var currentText = desc.levels[level];
+    var bullets = adv.levels[level];
+    var nextLabel = (level < 5) ? LEVEL_LABELS[level+1] : null;
+
+    var dots = LEVEL_LABELS.map(function(_, i){
+      return '<div class="dot' + (i <= level ? ' filled' : '') + '"></div>';
+    }).join('');
+
+    var html = '<div class="cap-card">' +
+      '<div class="cap-top">' +
+        '<div class="cap-name">' + esc(desc.name) + '</div>' +
+        '<div class="cap-top-header">' +
+          '<div class="level-pill">' + esc(levelLabel) + '</div>' +
+          '<div class="level-ladder">' + dots + '</div>' +
+        '</div>' +
+        '<div class="cap-desc">' + esc(currentText) + '</div>' +
+      '</div>' +
+      '<div class="cap-bottom">';
+
+    if (bullets && nextLabel) {
+      html += '<div class="next-label">Next step &rarr; ' + esc(nextLabel) + '</div>' +
+        '<ul class="next-list">' + bullets.map(function(b){ return '<li>' + esc(b) + '</li>'; }).join('') + '</ul>';
+    } else {
+      html += '<div class="next-label">Sustain and extend</div>' +
+        '<div class="sustain-text">You&rsquo;ve reached the highest maturity level for this capability. Hold the discipline that got you here, and use it as the model for the dimensions still catching up.</div>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
+  document.getElementById('grid').innerHTML = SLIDE_KEYS.map(renderCard).join('');
+
+  // Auto-height pass: measure this slide's own actual rendered content
+  // (after fonts are ready, so measurements are final) and lock every
+  // card's top/bottom sections to the tallest one actually present on
+  // THIS slide, rather than a hardcoded worst-case guess. Keeps the
+  // "Next step" divider aligned across all cards on a slide, with no
+  // wasted space when this slide's real capabilities are all short, and
+  // no overflow when a future real session's text is longer than
+  // anything in this illustrative build.
+  function lockHeights(){
+    var tops = Array.prototype.slice.call(document.querySelectorAll('.cap-top'));
+    var bottoms = Array.prototype.slice.call(document.querySelectorAll('.cap-bottom'));
+    var maxTop = Math.max.apply(null, tops.map(function(el){ return el.offsetHeight; }));
+    var maxBottom = Math.max.apply(null, bottoms.map(function(el){ return el.offsetHeight; }));
+    tops.forEach(function(el){ el.style.height = maxTop + 'px'; });
+    bottoms.forEach(function(el){ el.style.height = maxBottom + 'px'; });
+  }
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(lockHeights);
+  } else {
+    lockHeights();
+  }
+})();
+</script>
+</body></html>

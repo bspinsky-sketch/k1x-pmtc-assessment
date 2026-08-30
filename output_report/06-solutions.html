@@ -1,0 +1,160 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- Solutions</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+.page { z-index:0; }
+.bg-wave { position:absolute; inset:0; background:url('assets/bg/wave-gold-strong.png') center / cover no-repeat; z-index:-1; pointer-events:none; }
+.header-scrim { position:absolute; left:0; right:0; top:0; height:150px; background:linear-gradient(to bottom, rgba(255,255,255,.94) 0%, rgba(255,255,255,.85) 45%, rgba(255,255,255,0) 100%); z-index:-1; pointer-events:none; }
+
+.map-head{ display:grid; grid-template-columns:1fr 60px 1fr; margin-bottom:12px; padding:0 4px; }
+.map-head span{ font-weight:700; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#9A9A94; }
+.map-head span:last-child{ text-align:right; }
+
+.map-table{ display:flex; flex-direction:column; gap:18px; margin-bottom:26px; }
+.map-row{ display:grid; grid-template-columns:1fr 60px 1fr; align-items:stretch; gap:0; }
+.gap-card{ background:var(--panel); border-radius:10px 0 0 10px; padding:18px 20px; }
+.gap-name{ font-weight:700; font-size:14.5px; color:#1E1E1E; margin-bottom:5px; }
+.gap-note{ font-size:11.5px; line-height:1.4; color:#6E6E68; }
+.map-arrow{ display:flex; align-items:center; justify-content:center; background:var(--panel);
+  color:#9A9A94; font-size:17px; font-weight:700; }
+.fix-card{ background:#0A0A0A; border-radius:0 10px 10px 0; padding:18px 20px; display:flex;
+  justify-content:space-between; align-items:center; gap:14px; border-left:2px solid var(--gold); }
+.fix-body{ flex:1; }
+.fix-name-row{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+.fix-icon{ width:30px; height:30px; flex-shrink:0; display:block; }
+.fix-name{ font-weight:800; font-size:14.5px; color:#FFFFFF; }
+.fix-desc{ font-size:11.5px; line-height:1.4; color:rgba(255,255,255,.72); }
+.fix-stat{ flex-shrink:0; text-align:right; font-weight:800; font-size:17px; color:var(--gold); white-space:nowrap; }
+.fix-stat span{ display:block; font-weight:600; font-size:9.5px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
+
+.platform-strip{ display:flex; align-items:center; gap:14px; background:rgba(255,255,255,.75); border:1px solid #E4E4DF;
+  border-radius:10px; padding:14px 22px; }
+.platform-strip .label{ font-weight:700; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#9A9A94; flex-shrink:0; }
+.pill-row{ display:flex; gap:10px; flex:1; }
+.pill{ flex:1; text-align:center; font-weight:700; font-size:12px; color:#1E1E1E;
+  background:#FFFFFF; border:1px solid #E4E4DF; border-radius:6px; padding:8px 6px; }
+.pill b{ color:#1E1E1E; }
+</style></head>
+<body>
+<div class="page">
+  <div class="bg-wave"></div>
+  <div class="header-scrim"></div>
+  <div class="h1">What closing these gaps looks like.</div>
+  <div class="lede">The value here isn&rsquo;t a platform &ndash; it&rsquo;s what you get back: hours during your busiest months, and a compliance trail that holds up under audit.</div>
+
+  <div class="map-head"><span>Your priority gap</span><span></span><span>The outcome</span></div>
+  <div class="map-table" id="mapTable"><!-- rendered by renderGaps() below, from GAPS + CAPABILITY_FIXES --></div>
+
+  <div class="platform-strip">
+    <span class="label">The full platform</span>
+    <div class="pill-row">
+      <div class="pill"><b>Aggregator</b> &middot; Extract</div>
+      <div class="pill"><b>Creator</b> &middot; Produce</div>
+      <div class="pill"><b>Change</b> &middot; Exchange</div>
+      <div class="pill"><b>990 Tracker</b> &middot; File</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>06</span>
+  </div>
+</div>
+<script>
+(function(){
+  var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+  /* Same data-driven pattern as the dark-theme build: CAPABILITY_FIXES covers
+     all 10 active capability dimensions (calculator.py CAPABILITY_KEYS),
+     sourced from the workbook's "K1x Ecosystem Reference" (Data!B58:E66)
+     and per-capability advice text (Data!B68:F78). GAPS holds just this
+     client's top-3, verbatim from 06-where-you-stand.html. Swap GAPS for
+     any client's real results.gaps output to regenerate. */
+  var CAPABILITY_FIXES = {
+    document_intake: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'Every channel a K-1 arrives through – email, portal, or upload – feeds one automated intake queue.',
+      statNum: '90%', statLabel: 'less manual handling' },
+    inventory_management: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'Tags, filtering, and rollover matching keep your K-1 inventory complete and current, automatically.',
+      statNum: 'Live', statLabel: 'completeness tracking' },
+    data_extraction: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'AI extraction of the full K-1 package, validated on receipt – footnotes, allocations, and K-3s included.',
+      statNum: '90%', statLabel: 'less manual work' },
+    data_validation: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'Automated validation on federal data first, freeing your team to focus review where it matters – state and international.',
+      statNum: 'Automated', statLabel: 'federal validation' },
+    data_review: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'Executive Summary and Advanced Reporting surface risk and exceptions before a reviewer opens the file.',
+      statNum: '287%', statLabel: 'ROI, independent analysis' },
+    tax_analysis_reporting: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'Aggregator data becomes the foundation for forecasting, workpapers, and reporting your team already owns.',
+      statNum: '1 platform', statLabel: 'data foundation' },
+    integration: { product: 'K1xChange®', icon: 'assets/icons/product-change-color.png',
+      fix: 'Native integrations feed your tax software directly; K1xChange extends that to full digital transmission across the ecosystem.',
+      statNum: '1-click', statLabel: 'integrations' },
+    resource_structure: { product: 'K1xCelerator™', icon: null,
+      fix: 'Guided onboarding, role-based certification, and workflow blueprints turn access into realized value – without adding headcount.',
+      statNum: 'Scales', statLabel: 'with volume, not headcount' },
+    advisory: { product: 'K1xInsights', icon: null,
+      fix: 'Peer-cohort benchmarking and predictive analytics turn compliance data into planning conversations.',
+      statNum: '+61%', statLabel: 'rise in advisory revenue' },
+    governance_trust: { product: 'K1 Aggregator®', icon: 'assets/icons/product-aggregator-color.png',
+      fix: 'One governed source of truth, with a system-captured audit trail from receipt to filing – no more personal email.',
+      statNum: '100%', statLabel: 'traceable' }
+  };
+  /* Product icons: same glyph shapes extracted from k1x.io's "Dark" SVG set
+     (k1x.io/wp-content/uploads/2024/05/{K1Aggregator_Aggregator,K1-Creator,
+     K1XChange,990-Tracker}_Dark.svg), but recolored to match each product's
+     own colored-circle treatment from its live hero page: K1 Aggregator®
+     #11D0A7 (k1x.io/k1-aggregator), K1 Creator® #B57AE2 (k1x.io/k1-creator),
+     990 Tracker® #00CDFA (k1x.io/990-tracker) -- all sampled directly off
+     those pages. K1xChange has no standalone product page or colored-circle
+     asset on the site (it only appears as one stage in the platform's
+     workflow diagram), so its amber #F59E0B is our own choice, filling the
+     one warm gap the other three colors left open -- not sourced from K1x.
+     K1xCelerator/K1xInsights still have no icon at all (small or colored),
+     so those two rows in the lookup table fall back to text-only. */
+
+  // Sourced verbatim from scenarios/skywalker_industries.json's real gaps output
+  // (run_calculation(), goal-weighted rank) -- all three genuinely behind
+  // peer for this scenario, matching 05-where-you-stand.html exactly.
+  var GAPS = [
+    { key: 'governance_trust', name: 'Governance &amp; Trust', delta: -1.2,
+      note: 'Data sits in firm systems but controls are informal and IRC 7216 consent is handled ad hoc. Automation has been discussed with no owner. Payoff is assumed, not measured.' },
+    { key: 'integration', name: 'Integration', delta: -1.2,
+      note: 'Manual keypunching directly into e-file software.' },
+    { key: 'data_extraction', name: 'Data Extraction', delta: -1.3,
+      note: 'OCR of federal forms + manual input' }
+  ];
+
+
+  function renderGaps(gaps){
+    var html = gaps.map(function(g){
+      var fix = CAPABILITY_FIXES[g.key];
+      return '<div class="map-row">' +
+        '<div class="gap-card">' +
+          '<div class="gap-name">' + g.name + '</div>' +
+          '<div class="gap-note">' + esc(g.note) + '</div>' +
+        '</div>' +
+        '<div class="map-arrow">→</div>' +
+        '<div class="fix-card">' +
+          '<div class="fix-body">' +
+            '<div class="fix-name-row">' +
+              (fix.icon ? '<img class="fix-icon" src="' + fix.icon + '" alt="">' : '') +
+              '<div class="fix-name">' + esc(fix.product) + '</div>' +
+            '</div>' +
+            '<div class="fix-desc">' + esc(fix.fix) + '</div>' +
+          '</div>' +
+          '<div class="fix-stat">' + esc(fix.statNum) + '<span>' + esc(fix.statLabel) + '</span></div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('mapTable').innerHTML = html;
+  }
+
+  renderGaps(GAPS);
+})();
+</script>
+</body></html>

@@ -1,0 +1,10 @@
+<!-- "Priority areas to improve" icon (red, matches --score-adhoc: oklch(0.62 0.13 25)).
+     Feather Icons "target", stroke set to currentColor so it inherits
+     whatever color/context it's placed in. Used on Output Report page 6
+     ("Priority Areas to Improve" card header) until removed 2026-08-29;
+     saved here for reuse on another slide. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="10"></circle>
+  <circle cx="12" cy="12" r="6"></circle>
+  <circle cx="12" cy="12" r="2"></circle>
+</svg>

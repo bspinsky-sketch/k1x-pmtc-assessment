@@ -1,0 +1,112 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- Your Success Story</title>
+<style>
+@font-face { font-family:'Outfit'; font-weight:400; src:url('assets/fonts/Outfit-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:500; src:url('assets/fonts/Outfit-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:700; src:url('assets/fonts/Outfit-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:800; src:url('assets/fonts/Outfit-ExtraBold.ttf') format('truetype'); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:720px; }
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background:#FFFFFF;
+  font-family:'Outfit', sans-serif;
+  padding:56px 64px;
+  z-index:0;
+}
+.bg-wave { position:absolute; inset:0; background:url('assets/bg/wave-gold-strong.png') center / cover no-repeat; z-index:-1; pointer-events:none; }
+.header-scrim { position:absolute; left:0; right:0; top:0; height:160px; background:linear-gradient(to bottom, rgba(255,255,255,.94) 0%, rgba(255,255,255,.85) 45%, rgba(255,255,255,0) 100%); z-index:-1; pointer-events:none; }
+.h1 { font-weight:700; font-size:30px; line-height:1.08; letter-spacing:-0.02em; color:#1E1E1E; margin-bottom:10px; }
+.lede { font-weight:400; font-size:15.5px; line-height:1.5; color:#3A3A36; margin-bottom:28px; }
+
+.card-grid { display:grid; grid-template-columns:repeat(3, 1fr); grid-template-rows:repeat(2, 1fr); gap:44px 22px; }
+.card { background:#DFE5E6; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; }
+.card-header { background:#0A0A0A; padding:13px 18px 11px; }
+.card-company { color:#FFFFFF; font-weight:700; font-size:14.5px; letter-spacing:-0.01em; }
+.card-descriptor { color:rgba(255,255,255,.72); font-style:italic; font-weight:400; font-size:11px; margin-top:2px; }
+.card-body { padding:15px 18px; flex:1; font-size:12px; line-height:1.4; color:#1E1E1E; }
+.card-body .bold-line { font-weight:700; margin-bottom:8px; }
+.card-body .reg-line { font-weight:400; }
+.card-tag { background:#F5D000; display:flex; align-items:center; gap:12px; padding:0 18px; height:62px; }
+.card-tag img { height:44px; width:auto; display:block; flex-shrink:0; }
+.card-tag span { font-weight:700; font-size:12.5px; color:#1E1E1E; line-height:1.2; white-space:nowrap; }
+
+.stat-line { display:flex; align-items:baseline; gap:7px; margin-bottom:9px; }
+.stat-num { font-weight:800; font-size:27px; color:#1E1E1E; letter-spacing:-0.01em; }
+.stat-label { font-weight:400; font-size:12px; color:#1E1E1E; }
+
+.page-footer { position:absolute; left:64px; right:64px; bottom:32px; display:flex; justify-content:space-between; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#9A9A94; padding-top:14px; border-top:1px solid #E4E4DF; }
+</style></head>
+<body>
+<div class="page">
+  <div class="bg-wave"></div>
+  <div class="header-scrim"></div>
+  <div class="h1">Your success story starts here</div>
+  <div class="lede">Organizations like yours are already moving up the maturity scale.</div>
+
+  <div class="card-grid" style="height:490px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-company">Forvis Mazars</div>
+        <div class="card-descriptor">Top 10 Accounting Firm</div>
+      </div>
+      <div class="card-body"><div class="bold-line">2 days to assess. 2 weeks to go live. 2 months to value.</div><div class="reg-line">Team shifted from creating data to analyzing what it means.</div></div>
+      <div class="card-tag"><img src="assets/testimonial-icons/chain-link.png"><span>Firm-wide standardization</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-company">Top Accounting Firm</div>
+        <div class="card-descriptor">Advisory Transformation</div>
+      </div>
+      <div class="card-body"><div class="bold-line">&ldquo;With K1x, it's click, click, and I'm done.&rdquo;</div><div class="reg-line">Team shifted from manual handling to advisory conversations with clients.</div></div>
+      <div class="card-tag"><img src="assets/testimonial-icons/diamond.png"><span>50% time savings reinvested in advisory</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-company">Large Institutional Investor</div>
+        <div class="card-descriptor">Error Detection + Accuracy</div>
+      </div>
+      <div class="card-body"><div class="reg-line" style="margin-bottom:8px;">Quickly find answers, verify preparers analyzing correctly, and detect errors earlier.</div><div class="bold-line" style="margin-bottom:0;">K-3 processing made manageable.</div></div>
+      <div class="card-tag"><img src="assets/testimonial-icons/magnifying-glass.png"><span>Compliance and audit risk reduction</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-company">Bon Secours Mercy Health</div>
+        <div class="card-descriptor">VP of Tax</div>
+      </div>
+      <div class="card-body"><div class="bold-line">&ldquo;Before K1x, we relied on huge spreadsheets.&rdquo;</div><div class="reg-line">Now it's easy to set up entities, prepare returns, manage the entire process.</div></div>
+      <div class="card-tag"><img src="assets/testimonial-icons/document-check.png"><span>Full tax-exempt modernization</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-company">Leading University Endowment</div>
+        <div class="card-descriptor">Operational Transformation</div>
+      </div>
+      <div class="card-body"><div class="bold-line">Over 80% K-1 processing time saved.</div><div class="reg-line">Tax compliance team redirected to strategy and planning rather than document handling.</div></div>
+      <div class="card-tag"><img src="assets/testimonial-icons/rocket.png"><span>80% processing time reduction</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-company">990 Tracker Client</div>
+        <div class="card-descriptor">Documented ROI Analysis</div>
+      </div>
+      <div class="card-body">
+        <div class="stat-line"><span class="stat-num">$144K</span><span class="stat-label">annual labor savings.</span></div>
+        <div class="stat-line" style="margin-bottom:0;"><span class="stat-num">1,278</span><span class="stat-label">person hours reclaimed.</span></div>
+      </div>
+      <div class="card-tag"><img src="assets/testimonial-icons/dollar-bill.png"><span>311% ROI in 4 months</span></div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>10</span>
+  </div>
+</div>
+</body></html>

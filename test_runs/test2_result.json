@@ -1,0 +1,176 @@
+{
+  "company": "Test Scenario 2",
+  "industry": "Family Office / Wealth Management",
+  "goals": {
+    "reduce_time": 4,
+    "standardize": 4,
+    "scalable_growth": 4,
+    "accuracy": 4,
+    "client_experience": 4,
+    "advisory_services": 4
+  },
+  "ratings": {
+    "document_intake": 5,
+    "inventory_management": 5,
+    "data_extraction": 5,
+    "data_validation": 5,
+    "data_review": 5,
+    "tax_analysis_reporting": 5,
+    "integration": 5,
+    "resource_structure": 5,
+    "advisory": 5,
+    "governance_trust": 5
+  },
+  "result": {
+    "company": "Test Scenario 2",
+    "industry": "Family Office / Wealth Management",
+    "your_score": 5.0,
+    "peer_score": 2.6,
+    "peer_count": 43,
+    "band_name": "Optimizing Capabilities",
+    "band_subtitle": "(Value is Compounding)",
+    "narrative": "Data flows on its own, and the team's attention has shifted from producing it to using it, across K-1s, other filings, and whatever comes next. Each season builds on the last instead of starting over, and the operation runs on evidence rather than heroics. That headroom is what turns compliance work into an advisory practice.",
+    "narrative_sentences": [
+      "Data flows on its own, and the team's attention has shifted from producing it to using it, across K-1s, other filings, and whatever comes next.",
+      "Each season builds on the last instead of starting over, and the operation runs on evidence rather than heroics.",
+      "That headroom is what turns compliance work into an advisory practice."
+    ],
+    "strengths": [
+      {
+        "key": "document_intake",
+        "name": "Document Intake",
+        "score": 5
+      },
+      {
+        "key": "inventory_management",
+        "name": "Inventory Management",
+        "score": 5
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "score": 5
+      }
+    ],
+    "gaps": [
+      {
+        "key": "governance_trust",
+        "name": "Governance & Trust",
+        "delta": 2.8
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "delta": 1.7
+      },
+      {
+        "key": "integration",
+        "name": "Integration",
+        "delta": 2.8
+      }
+    ],
+    "bar_rows": [
+      {
+        "key": "document_intake",
+        "name": "Document Intake",
+        "you": 5,
+        "peer": 3.5
+      },
+      {
+        "key": "inventory_management",
+        "name": "Inventory Management",
+        "you": 5,
+        "peer": 3.2
+      },
+      {
+        "key": "data_extraction",
+        "name": "Data Extraction",
+        "you": 5,
+        "peer": 3.3
+      },
+      {
+        "key": "data_validation",
+        "name": "Data Validation",
+        "you": 5,
+        "peer": 2.3
+      },
+      {
+        "key": "data_review",
+        "name": "Data Review",
+        "you": 5,
+        "peer": 2.1
+      },
+      {
+        "key": "tax_analysis_reporting",
+        "name": "Tax Analysis & Reporting",
+        "you": 5,
+        "peer": 2.8
+      },
+      {
+        "key": "integration",
+        "name": "Integration",
+        "you": 5,
+        "peer": 2.2
+      },
+      {
+        "key": "resource_structure",
+        "name": "Resource Structure",
+        "you": 5,
+        "peer": 2.1
+      },
+      {
+        "key": "advisory",
+        "name": "Advisory",
+        "you": 5,
+        "peer": 1.8
+      },
+      {
+        "key": "governance_trust",
+        "name": "Governance & Trust",
+        "you": 5,
+        "peer": 2.2
+      }
+    ],
+    "curve": {
+      "now": 5.0,
+      "target": 3.6,
+      "peer": 2.6
+    },
+    "capability_scores": {
+      "document_intake": 5,
+      "inventory_management": 5,
+      "data_extraction": 5,
+      "data_validation": 5,
+      "data_review": 5,
+      "tax_analysis_reporting": 5,
+      "integration": 5,
+      "resource_structure": 5,
+      "advisory": 5,
+      "governance_trust": 5
+    },
+    "strength_rank": {
+      "document_intake": 1,
+      "inventory_management": 2,
+      "data_extraction": 3,
+      "data_validation": 4,
+      "data_review": 5,
+      "tax_analysis_reporting": 6,
+      "integration": 7,
+      "resource_structure": 8,
+      "advisory": 9,
+      "governance_trust": 10
+    },
+    "gap_rank": {
+      "governance_trust": 1,
+      "data_extraction": 2,
+      "integration": 3,
+      "data_review": 4,
+      "data_validation": 5,
+      "tax_analysis_reporting": 6,
+      "advisory": 7,
+      "resource_structure": 8,
+      "document_intake": 9,
+      "inventory_management": 10
+    }
+  }
+}

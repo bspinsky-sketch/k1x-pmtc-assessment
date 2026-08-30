@@ -1,0 +1,159 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- Where You Stand Today</title>
+<style>
+@font-face { font-family:'Outfit'; font-weight:400; src:url('assets/fonts/Outfit-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:500; src:url('assets/fonts/Outfit-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:700; src:url('assets/fonts/Outfit-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:800; src:url('assets/fonts/Outfit-ExtraBold.ttf') format('truetype'); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:720px; }
+:root{
+  --signal:#F5D000; --slate-light:#C4CBCC;
+  --score-mature: oklch(0.62 0.13 155); --score-adhoc: oklch(0.62 0.13 25); --score-info: oklch(0.62 0.13 255);
+}
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background-image:url('assets/picture1.png'); background-size:cover; background-position:center;
+  font-family:'Outfit', sans-serif;
+  padding:48px 64px;
+  color:#fff;
+}
+.h1 { font-weight:700; font-size:28px; line-height:1.08; letter-spacing:-0.02em; color:#FFFFFF; margin-bottom:8px; }
+.lede { font-weight:400; font-size:14.5px; line-height:1.5; color:rgba(255,255,255,.78); margin-bottom:22px; }
+
+/* ---- score row (ring + band + narrative) ----
+   Each block below is an independently positioned "object" (like a PPT shape):
+   absolute top/left inside its own position:relative box, centered on the box's
+   own centerline via left:50%/translateX(-50%), nudged to hit two shared
+   reference lines across both boxes: the ring-number line (--num-y) and the
+   band/peer-note line (--txt-y). */
+.score-card { display:grid; grid-template-columns:.8fr 1.6fr .78fr; column-gap:32px; padding-bottom:18px; border-bottom:1px solid rgba(255,255,255,.14); margin-bottom:16px; }
+.score-box { position:relative; height:216px; box-sizing:border-box; padding:18px 16px 20px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.22); border-radius:12px; }
+.score-box-scrim { background:linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07); }
+.score-eyebrow { position:absolute; top:18px; left:50%; transform:translateX(-50%); width:100%; text-align:center; font-weight:700; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--slate-light); }
+.eyebrow { font-weight:700; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--slate-light); margin-bottom:10px; }
+
+.ring-figure { position:absolute; top:42px; left:50%; transform:translateX(-50%); width:108px; height:108px; }
+.ring-svg { width:100%; height:100%; transform:rotate(-90deg); }
+.ring-track { fill:none; stroke:rgba(255,255,255,.14); stroke-width:10; }
+.ring-progress { fill:none; stroke:var(--signal); stroke-width:10; stroke-linecap:round; }
+.ring-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.ring-stat { display:flex; align-items:baseline; gap:4px; }
+.ring-num { font-weight:800; font-size:28px; letter-spacing:-.02em; color:#fff; }
+.ring-den { font-weight:400; font-size:12px; color:var(--slate-light); }
+
+.band-row { position:absolute; top:164px; left:50%; transform:translateX(-50%); width:100%; text-align:center; }
+.peer-eyebrow { position:absolute; top:18px; left:50%; transform:translateX(-50%); width:229px; text-align:center; font-weight:700; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--slate-light); line-height:1.3; }
+.peer-ring-figure { position:absolute; top:42px; left:50%; transform:translateX(-50%); width:108px; height:108px; }
+.peer-progress { fill:none; stroke:var(--score-info); stroke-width:10; stroke-linecap:round; }
+.peer-num { font-weight:800; font-size:28px; letter-spacing:-.02em; color:var(--score-info); }
+.peer-den { font-weight:400; font-size:12px; color:var(--slate-light); }
+.peer-note { position:absolute; top:164px; left:50%; transform:translateX(-50%); width:215px; text-align:center; font-size:11.5px; line-height:1.4; color:var(--slate-light); }
+
+.band-strong { font-weight:800; font-size:17px; line-height:1.25; color:#fff; margin-bottom:5px; }
+.band-sub { font-size:12.5px; color:var(--slate-light); }
+
+.narrative-card { background:linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.22); border-radius:12px; padding:12px 18px 14px; }
+.narrative-body p { font-size:12.5px; line-height:1.45; color:rgba(255,255,255,.92); margin-bottom:8px; }
+.narrative-body p:last-child { margin-bottom:0; }
+
+/* ---- strengths / gaps cards ---- */
+.sg-table { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+.sg-col { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.22); border-radius:12px; overflow:hidden; }
+.sg-col-scrim { background:linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07); }
+.sg-head { border-bottom:2px solid rgba(255,255,255,.5); padding:14px 20px 10px; }
+.sg-header { font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:#fff; }
+.sg-foot { font-size:12.5px; color:rgba(255,255,255,.72); line-height:1.4; margin-top:3px; }
+.sg-row { display:flex; justify-content:space-between; align-items:center; padding:9px 20px; border-bottom:1px solid rgba(255,255,255,.16); }
+.sg-row:last-child { border-bottom:none; }
+.sg-row-name { font-size:15px; color:rgba(255,255,255,.92); }
+.sg-row-level { font-size:12px; line-height:1.4; color:rgba(255,255,255,.55); margin-top:3px; max-width:410px; }
+.sg-delta { font-weight:700; font-size:15px; flex-shrink:0; padding-left:12px; }
+.delta-ahead { color:var(--score-mature); }
+.delta-behind { color:var(--score-adhoc); }
+
+.page-footer { position:absolute; left:64px; right:64px; bottom:28px; display:flex; justify-content:space-between; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.55); padding-top:12px; border-top:1px solid rgba(255,255,255,.18); }
+</style></head>
+<body>
+<div class="page">
+  <div class="h1">Where you stand today</div>
+  <div class="lede">Your capability score, how it compares to peer leaders, and where the biggest opportunities are.</div>
+
+  <!-- Score, band, strengths and gaps below are sourced verbatim from
+       scenarios/skywalker_industries.json (your_score 1.8, band "Automating the
+       Foundation", real strengths/gaps arrays) -- consistent with pages
+       3 and 4, which draw on the same run_calculation() output. -->
+  <div class="score-card">
+    <div class="ring-col score-box">
+      <div class="score-eyebrow">Your Score</div>
+      <div class="ring-figure">
+        <svg class="ring-svg" viewBox="0 0 148 148" aria-hidden="true">
+          <circle class="ring-track" cx="74" cy="74" r="65"></circle>
+          <circle class="ring-progress" cx="74" cy="74" r="65" stroke-dasharray="408.4" stroke-dashoffset="261.4"></circle>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-stat"><div class="ring-num">1.8</div><div class="ring-den">/5</div></div>
+        </div>
+      </div>
+      <div class="band-row">
+        <div class="band-strong">Automating the Foundation</div>
+        <div class="band-sub">(Value is at Risk)</div>
+      </div>
+    </div>
+    <div class="narrative-col">
+      <div class="narrative-card">
+        <div class="eyebrow">What This Means</div>
+        <div class="narrative-body">
+          <p>The basics are in place, but they still run on manual effort.</p>
+          <p>Collection, entry, and review depend on specific people doing specific things by hand, across K-1s and the other filings that share the same season.</p>
+          <p>That's fragile: a busy week, a departure, or a missed handoff is enough to put accuracy or a deadline at risk.</p>
+        </div>
+      </div>
+    </div>
+    <div class="band-col score-box score-box-scrim">
+      <div class="peer-eyebrow">Where your Fund peer leaders ranked</div>
+      <div class="peer-ring-figure">
+        <svg class="ring-svg" viewBox="0 0 148 148" aria-hidden="true">
+          <circle class="ring-track" cx="74" cy="74" r="65"></circle>
+          <circle class="ring-progress peer-progress" cx="74" cy="74" r="65" stroke-dasharray="408.4" stroke-dashoffset="196.0"></circle>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-stat"><div class="peer-num">2.6</div><div class="peer-den">/5</div></div>
+        </div>
+      </div>
+      <div class="peer-note">Leaders are the top percentile out of 54 peers.</div>
+    </div>
+  </div>
+
+  <div class="sg-table">
+    <div class="sg-col">
+      <div class="sg-head">
+        <div>
+          <div class="sg-header">Where you scored highest</div>
+          <div class="sg-foot">Outscoring peers. Unweighted.</div>
+        </div>
+      </div>
+      <div class="sg-row"><div><div class="sg-row-name">Document Intake</div><div class="sg-row-level">Automated collection via client portal</div></div><span class="sg-delta delta-ahead">3 / 5</span></div>
+      <div class="sg-row"><div><div class="sg-row-name">Inventory Management</div><div class="sg-row-level">Centralized tracking tool with manual updates</div></div><span class="sg-delta delta-ahead">3 / 5</span></div>
+      <div class="sg-row"><div><div class="sg-row-name">Data Extraction</div><div class="sg-row-level">OCR of federal forms + manual input</div></div><span class="sg-delta delta-ahead">2 / 5</span></div>
+    </div>
+    <div class="sg-col sg-col-scrim">
+      <div class="sg-head">
+        <div>
+          <div class="sg-header">Priority areas to improve</div>
+          <div class="sg-foot">Biggest gaps. Weighted to your goals.</div>
+        </div>
+      </div>
+      <div class="sg-row"><div><div class="sg-row-name">Governance &amp; Trust</div><div class="sg-row-level">Data sits in firm systems but controls are informal and IRC 7216 consent is handled ad hoc. Automation has been discussed with no owner. Payoff is assumed, not measured.</div></div><span class="sg-delta delta-behind">-1.2</span></div>
+      <div class="sg-row"><div><div class="sg-row-name">Integration</div><div class="sg-row-level">Manual keypunching directly into e-file software.</div></div><span class="sg-delta delta-behind">-1.2</span></div>
+      <div class="sg-row"><div><div class="sg-row-name">Data Extraction</div><div class="sg-row-level">OCR of federal forms + manual input</div></div><span class="sg-delta delta-behind">-1.3</span></div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>05</span>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,244 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- Score by Capability</title>
+<style>
+@font-face { font-family:'Outfit'; font-weight:400; src:url('assets/fonts/Outfit-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:500; src:url('assets/fonts/Outfit-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:700; src:url('assets/fonts/Outfit-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:800; src:url('assets/fonts/Outfit-ExtraBold.ttf') format('truetype'); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:720px; }
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background:#FFFFFF;
+  font-family:'Outfit', sans-serif;
+  padding:56px 64px;
+}
+.h1 { font-weight:700; font-size:30px; line-height:1.08; letter-spacing:-0.02em; color:#1E1E1E; margin-bottom:10px; }
+.lede { font-weight:400; font-size:15.5px; line-height:1.5; color:#3A3A36; margin-bottom:22px; }
+
+.chart-legend-row { display:flex; gap:14px; margin-bottom:18px; }
+.legend-spacer { width:190px; flex-shrink:0; }
+.chart-legend { flex:1; display:flex; flex-wrap:wrap; justify-content:center; gap:22px; }
+.legend-item { display:flex; align-items:center; gap:7px; font-size:12px; color:#3A3A36; }
+.legend-swatch { width:13px; height:13px; flex-shrink:0; border-radius:2px; }
+.swatch-peer { background:#AFC4DB; }
+.swatch-behind { background:oklch(0.62 0.13 25); }
+.swatch-ahead { background:oklch(0.62 0.13 155); }
+
+.cap-row { margin-bottom:10px; }
+.cap-row-top { display:flex; align-items:center; gap:14px; }
+.cap-label { width:190px; font-size:15px; font-weight:500; color:#1E1E1E; text-align:right; flex-shrink:0; line-height:1.25; }
+.bar-area { flex:1; position:relative; height:18px; background:#E4E4DF; }
+.bar-peer { position:absolute; top:0; left:0; height:100%; background:oklch(0.62 0.13 255); opacity:.35; }
+.bar-user { position:absolute; top:25%; left:0; height:50%; }
+.bar-user.behind { background:oklch(0.62 0.13 25); }
+.bar-user.ahead { background:oklch(0.62 0.13 155); }
+.cap-row-bottom { display:flex; gap:14px; margin-top:2px; }
+.label-spacer { width:190px; flex-shrink:0; }
+.label-track { flex:1; position:relative; height:13px; }
+.bar-peer-label { position:absolute; top:0; transform:translateX(-50%); font-family:'Outfit', sans-serif; font-weight:600; font-size:11px; color:#3A3A36; white-space:nowrap; }
+
+.chart-rows { position:relative; }
+.gridlines { position:absolute; left:204px; right:0; top:0; bottom:0; }
+.gridline { position:absolute; top:0; bottom:0; width:1px; background:#6E6E68; opacity:.18; }
+
+.x-axis-row { display:flex; gap:14px; margin:8px 0 20px; }
+.x-spacer { width:190px; flex-shrink:0; }
+.x-ticks { flex:1; display:flex; justify-content:space-between; }
+.x-tick { font-family:'Outfit', sans-serif; font-weight:600; font-size:10.5px; color:#6E6E68; }
+
+.page-footer { position:absolute; left:64px; right:64px; bottom:32px; display:flex; justify-content:space-between; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#9A9A94; padding-top:14px; border-top:1px solid #E4E4DF; }
+</style></head>
+<body>
+<div class="page">
+  <div class="h1">Score by Capability</div>
+  <div class="lede">Your self-assessment against the leaders among 54 Fund peers.</div>
+
+  <div class="chart-legend-row">
+    <div class="legend-spacer"></div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-swatch swatch-peer"></div><span>Peer leaders (Fund, n=54)</span></div>
+      <div class="legend-item"><div class="legend-swatch swatch-behind"></div><span>Your score &ndash; behind peers</span></div>
+      <div class="legend-item"><div class="legend-swatch swatch-ahead"></div><span>Your score &ndash; at or ahead of peers</span></div>
+    </div>
+  </div>
+
+  <!-- Bars below are sourced verbatim from scenarios/skywalker_industries.json's
+       bar_rows (you/peer per capability) and PEER_SCORES -- every capability
+       is genuinely behind peer for this scenario, which is consistent with
+       the overall 1.8-vs-2.6 score gap. width% = value/5*100. -->
+  <div class="chart-rows">
+  <div class="gridlines">
+    <div class="gridline" style="left:0%"></div>
+    <div class="gridline" style="left:20%"></div>
+    <div class="gridline" style="left:40%"></div>
+    <div class="gridline" style="left:60%"></div>
+    <div class="gridline" style="left:80%"></div>
+    <div class="gridline" style="left:100%"></div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Document Intake</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:70%"></div>
+        <div class="bar-user behind" style="width:60%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:70%">3.5</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Inventory Management</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:64%"></div>
+        <div class="bar-user behind" style="width:60%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:64%">3.2</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Data Extraction</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:66%"></div>
+        <div class="bar-user behind" style="width:40%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:66%">3.3</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Data Validation</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:46%"></div>
+        <div class="bar-user behind" style="width:40%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:46%">2.3</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Data Review</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:42%"></div>
+        <div class="bar-user behind" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:42%">2.1</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Tax Analysis &amp; Reporting</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:56%"></div>
+        <div class="bar-user behind" style="width:40%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:56%">2.8</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Integration</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:44%"></div>
+        <div class="bar-user behind" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:44%">2.2</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Resource Structure</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:42%"></div>
+        <div class="bar-user behind" style="width:40%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:42%">2.1</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Advisory</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:36%"></div>
+        <div class="bar-user behind" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:36%">1.8</div>
+      </div>
+    </div>
+  </div>
+  <div class="cap-row">
+    <div class="cap-row-top">
+      <div class="cap-label">Governance &amp; Trust</div>
+      <div class="bar-area">
+        <div class="bar-peer" style="width:44%"></div>
+        <div class="bar-user behind" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="cap-row-bottom">
+      <div class="label-spacer"></div>
+      <div class="label-track">
+        <div class="bar-peer-label" style="left:44%">2.2</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="x-axis-row">
+    <div class="x-spacer"></div>
+    <div class="x-ticks">
+      <span class="x-tick">0</span><span class="x-tick">1</span><span class="x-tick">2</span><span class="x-tick">3</span><span class="x-tick">4</span><span class="x-tick">5</span>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>04</span>
+  </div>
+</div>
+</body></html>

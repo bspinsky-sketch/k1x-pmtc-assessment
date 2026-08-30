@@ -1,0 +1,164 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- What You Told Us</title>
+<style>
+@font-face { font-family:'Outfit'; font-weight:400; src:url('assets/fonts/Outfit-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:500; src:url('assets/fonts/Outfit-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:700; src:url('assets/fonts/Outfit-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:800; src:url('assets/fonts/Outfit-ExtraBold.ttf') format('truetype'); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:720px; }
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background:#FFFFFF;
+  font-family:'Outfit', sans-serif;
+  padding:56px 64px;
+}
+.h1 { font-weight:700; font-size:30px; line-height:1.08; letter-spacing:-0.02em; color:#1E1E1E; margin-top:23px; margin-bottom:10px; }
+.lede { font-weight:400; font-size:15.5px; line-height:1.5; color:#3A3A36; }
+
+.told-grid { display:flex; gap:20px; margin-top:26px; justify-content:center; }
+.told-card { background:#F4F4F0; border-radius:10px; padding:16px 22px; width:40%; }
+.told-card h3 { font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#6E6E68; margin-bottom:4px; }
+.told-card p { font-weight:600; font-size:17px; color:#1E1E1E; }
+
+.evolve-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:36px; margin-top:34px; }
+.evolve-group-label { display:flex; align-items:center; gap:12px; padding-bottom:14px; border-bottom:2px solid #1E1E1E; margin-bottom:6px; }
+.icon-badge { width:38px; height:38px; border-radius:50%; background:#F5D000; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.icon-badge img { width:22px; height:22px; display:block; }
+.evolve-group-label h4 { font-weight:800; font-size:18px; letter-spacing:-0.01em; color:#1E1E1E; }
+
+.goal-row { padding:12px 0; border-bottom:1px solid #E4E4DF; }
+.goal-row .gname { font-weight:600; font-size:13.5px; color:#1E1E1E; margin-bottom:4px; }
+.goal-row .gdesc { font-weight:400; font-size:11.5px; line-height:1.4; color:#6E6E68; margin-bottom:9px; }
+.gspark { display:flex; align-items:center; gap:10px; }
+.gspark .segs { display:flex; gap:3px; width:110px; height:7px; }
+.gspark .segs i { flex:1; background:#E4E4DF; border-radius:1px; }
+.gspark .segs i.filled { background:#1E1E1E; }
+.gspark .segs i.top-filled { background:#F5D000; }
+.gspark .glabel { font-weight:700; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#6E6E68; }
+
+.page-footer { position:absolute; left:64px; right:64px; bottom:32px; display:flex; justify-content:space-between; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#9A9A94; padding-top:14px; border-top:1px solid #E4E4DF; }
+</style></head>
+<body>
+<div class="page">
+  <div class="h1">What you told us</div>
+  <div class="lede">Your priorities shape which capabilities matter most for your roadmap. This is the lens the rest of the report is built through.</div>
+
+  <div class="told-grid">
+    <div class="told-card"><h3>Company</h3><p>Skywalker Industries, LLC</p></div>
+    <div class="told-card"><h3>Industry</h3><p id="industryValue">Fund</p></div>
+  </div>
+
+  <div class="evolve-grid">
+    <div class="evolve-group">
+      <div class="evolve-group-label">
+        <span class="icon-badge"><img src="assets/icons/capacity.png"></span>
+        <h4>Evolve Capacity</h4>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Reduce Cycle Time</div>
+        <div class="gdesc">Shorten the time from K-1 receipt to filing-ready data so deadlines are met with less effort.</div>
+        <div class="gspark">
+          <div class="segs"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="top-filled"></i></div>
+          <div class="glabel">Top</div>
+        </div>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Centralize &amp; Standardize</div>
+        <div class="gdesc">Unify intake, naming, and workflows into one governed source of truth across teams.</div>
+        <div class="gspark">
+          <div class="segs"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i></i></div>
+          <div class="glabel">High</div>
+        </div>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Support Scalable Growth</div>
+        <div class="gdesc">Absorb rising K-1 volume and complexity without adding proportional headcount or cost.</div>
+        <div class="gspark">
+          <div class="segs"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i></i><i></i></div>
+          <div class="glabel">Medium</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="evolve-group">
+      <div class="evolve-group-label">
+        <span class="icon-badge"><img src="assets/icons/confidence.png"></span>
+        <h4>Evolve Confidence</h4>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Improve Accuracy</div>
+        <div class="gdesc">Reduce errors and rework, and produce data you can defend to auditors, regulators, and LPs.</div>
+        <div class="gspark">
+          <div class="segs"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="top-filled"></i></div>
+          <div class="glabel">Top</div>
+        </div>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Elevate Client Experience</div>
+        <div class="gdesc">Deliver transparent, trustworthy results that drive retention, re-ups, and referrals.</div>
+        <div class="gspark">
+          <div class="segs"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i></i><i></i></div>
+          <div class="glabel">Medium</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="evolve-group">
+      <div class="evolve-group-label">
+        <span class="icon-badge"><img src="assets/icons/capability.png"></span>
+        <h4>Evolve Capability</h4>
+      </div>
+      <div class="goal-row">
+        <div class="gname" id="goal9Name">Elevate Decision Support</div>
+        <div class="gdesc" id="goal9Desc">Turn compliance data into decision-grade insight that guides investment, planning, and stakeholder reporting.</div>
+        <div class="gspark">
+          <div class="segs"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i></i></div>
+          <div class="glabel">High</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; Skywalker Industries, LLC</span>
+    <span>02</span>
+  </div>
+</div>
+<script>
+(function(){
+  // Per-session instance data: this client's real Profile priorities
+  // (reduce_time 4, standardize 3, scalable_growth 2, accuracy 4,
+  // client_experience 2, advisory_services 3, 0-4 None..Top scale) and
+  // real Industry answer (Fund), sourced from scenarios/skywalker_industries.json
+  // -- swap this object for any real session's Profile answers and the
+  // whole page (including Goal 9's label/description below) re-renders
+  // correctly, no other code change.
+  var SESSION_GOALS = {
+    reduce_time: 4, standardize: 3, scalable_growth: 2,
+    accuracy: 4, client_experience: 2, advisory_services: 3
+  };
+  var INDUSTRY = 'Fund';
+
+  // Goal 9's label/description flips on industry -- ported verbatim from
+  // the live app's own app/app/templates/pmtc/profile.html
+  // GOAL9_BY_INDUSTRY object (Profile!B20/E20 named ranges), not
+  // reinvented here. Fund falls through to the "other" branch, same as
+  // every non-Accounting industry.
+  var GOAL9_BY_INDUSTRY = {
+    Accounting: {
+      name: 'Expand Advisory Services',
+      desc: 'Turn compliance data into advisory-grade insight and new service lines that raise billable value.'
+    },
+    other: {
+      name: 'Elevate Decision Support',
+      desc: 'Turn compliance data into decision-grade insight that guides investment, planning, and stakeholder reporting.'
+    }
+  };
+  var goal9 = GOAL9_BY_INDUSTRY[INDUSTRY] || GOAL9_BY_INDUSTRY.other;
+  document.getElementById('goal9Name').textContent = goal9.name;
+  document.getElementById('goal9Desc').textContent = goal9.desc;
+})();
+</script>
+</body></html>

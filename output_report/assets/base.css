@@ -1,0 +1,54 @@
+/* PMTC Output Report -- shared page shell.
+   Fonts, page sizing, and the header/footer pattern common to every content
+   page (everything after the cover, which is dark and structurally its own
+   thing). Link this from each new page's <head>, then keep page-specific
+   rules in that page's own <style> block.
+
+   Usage:
+     <link rel="stylesheet" href="assets/base.css">
+     <style> ...page-specific rules... </style>
+
+   Established on pages 02-04 by hand, pulled out here once the pattern held
+   for four pages running. Pages 01-04 are locked and keep their own inline
+   copies of this shell rather than being retrofitted -- this file is for
+   page 05 onward.
+*/
+
+@font-face { font-family:'Outfit'; font-weight:400; src:url('fonts/Outfit-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:500; src:url('fonts/Outfit-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:700; src:url('fonts/Outfit-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:800; src:url('fonts/Outfit-ExtraBold.ttf') format('truetype'); }
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:720px; }
+
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background:#FFFFFF;
+  font-family:'Outfit', sans-serif;
+  padding:56px 64px;
+}
+
+.h1 { font-weight:700; font-size:30px; line-height:1.08; letter-spacing:-0.02em; color:#1E1E1E; margin-bottom:10px; }
+.lede { font-weight:400; font-size:15.5px; line-height:1.5; color:#3A3A36; margin-bottom:22px; }
+
+.page-footer {
+  position:absolute; left:64px; right:64px; bottom:32px;
+  display:flex; justify-content:space-between;
+  font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:#9A9A94; padding-top:14px; border-top:1px solid #E4E4DF;
+}
+
+/* Shared tokens.
+   --gold matches the accent used everywhere so far: cover meta label, page 2
+   icon badges and the "Top" sparkline fill, page 3 legend swatch, page 4
+   pill tags.
+   --panel is the canonical light-neutral panel background for new pages.
+   Pages 2-4 each used a slightly different near-white gray (#F4F4F0,
+   #E4E4DF, #DFE5E6) since this token didn't exist yet when they were built --
+   left as-is since they're locked. Use --panel for anything new so we don't
+   add a fourth shade of the same idea. */
+:root {
+  --gold: #F5D000;
+  --panel: #E4E4DF;
+}
