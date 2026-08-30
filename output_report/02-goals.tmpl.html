@@ -1,0 +1,129 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- What You Told Us</title>
+<style>
+@font-face { font-family:'Outfit'; font-weight:400; src:url('assets/fonts/Outfit-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:500; src:url('assets/fonts/Outfit-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:700; src:url('assets/fonts/Outfit-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Outfit'; font-weight:800; src:url('assets/fonts/Outfit-ExtraBold.ttf') format('truetype'); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:1280px; height:720px; }
+.page {
+  width:1280px; height:720px; position:relative; overflow:hidden;
+  background:#FFFFFF;
+  font-family:'Outfit', sans-serif;
+  padding:56px 64px;
+}
+.h1 { font-weight:700; font-size:30px; line-height:1.08; letter-spacing:-0.02em; color:#1E1E1E; margin-top:23px; margin-bottom:10px; }
+.lede { font-weight:400; font-size:15.5px; line-height:1.5; color:#3A3A36; }
+
+.told-grid { display:flex; gap:20px; margin-top:26px; justify-content:center; }
+.told-card { background:#F4F4F0; border-radius:10px; padding:16px 22px; width:40%; }
+.told-card h3 { font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#6E6E68; margin-bottom:4px; }
+.told-card p { font-weight:600; font-size:17px; color:#1E1E1E; }
+
+.evolve-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:36px; margin-top:34px; }
+.evolve-group-label { display:flex; align-items:center; gap:12px; padding-bottom:14px; border-bottom:2px solid #1E1E1E; margin-bottom:6px; }
+.icon-badge { width:38px; height:38px; border-radius:50%; background:#F5D000; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.icon-badge img { width:22px; height:22px; display:block; }
+.evolve-group-label h4 { font-weight:800; font-size:18px; letter-spacing:-0.01em; color:#1E1E1E; }
+
+.goal-row { padding:12px 0; border-bottom:1px solid #E4E4DF; }
+.goal-row .gname { font-weight:600; font-size:13.5px; color:#1E1E1E; margin-bottom:4px; }
+.goal-row .gdesc { font-weight:400; font-size:11.5px; line-height:1.4; color:#6E6E68; margin-bottom:9px; }
+.gspark { display:flex; align-items:center; gap:10px; }
+.gspark .segs { display:flex; gap:3px; width:110px; height:7px; }
+.gspark .segs i { flex:1; background:#E4E4DF; border-radius:1px; }
+.gspark .segs i.filled { background:#1E1E1E; }
+.gspark .segs i.top-filled { background:#F5D000; }
+.gspark .glabel { font-weight:700; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#6E6E68; }
+
+.page-footer { position:absolute; left:64px; right:64px; bottom:32px; display:flex; justify-content:space-between; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#9A9A94; padding-top:14px; border-top:1px solid #E4E4DF; }
+</style></head>
+<body>
+{#- Priority dots macro: value is 0-4 (None..Top, calculator.py's PRIORITY_LABELS
+   scale). Filled-segment count is value+1; the Top case (value==4) colors its
+   5th segment gold (top-filled) instead of black. Reverse-engineered from the
+   markup this replaces -- verified against every real value 0-4 seen so far
+   (test1/test2/test3/Skywalker) before being generalized here. #}
+{%- macro priority_dots(value) -%}
+  {%- set labels = ['None', 'Low', 'Medium', 'High', 'Top'] -%}
+  <div class="segs">{% for i in range(5) %}{% if value == 4 and i == 4 %}<i class="top-filled"></i>{% elif i <= value %}<i class="filled"></i>{% else %}<i></i>{% endif %}{% endfor %}</div>
+  <div class="glabel">{{ labels[value] }}</div>
+{%- endmacro -%}
+<div class="page">
+  <div class="h1">What you told us</div>
+  <div class="lede">Your priorities shape which capabilities matter most for your roadmap. This is the lens the rest of the report is built through.</div>
+
+  <div class="told-grid">
+    <div class="told-card"><h3>Company</h3><p>{{ results.company }}</p></div>
+    <div class="told-card"><h3>Industry</h3><p id="industryValue">{{ results.industry }}</p></div>
+  </div>
+
+  <div class="evolve-grid">
+    <div class="evolve-group">
+      <div class="evolve-group-label">
+        <span class="icon-badge"><img src="assets/icons/capacity.png"></span>
+        <h4>Evolve Capacity</h4>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Reduce Cycle Time</div>
+        <div class="gdesc">Shorten the time from K-1 receipt to filing-ready data so deadlines are met with less effort.</div>
+        <div class="gspark">{{ priority_dots(goals.reduce_time) }}</div>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Centralize &amp; Standardize</div>
+        <div class="gdesc">Unify intake, naming, and workflows into one governed source of truth across teams.</div>
+        <div class="gspark">{{ priority_dots(goals.standardize) }}</div>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Support Scalable Growth</div>
+        <div class="gdesc">Absorb rising K-1 volume and complexity without adding proportional headcount or cost.</div>
+        <div class="gspark">{{ priority_dots(goals.scalable_growth) }}</div>
+      </div>
+    </div>
+
+    <div class="evolve-group">
+      <div class="evolve-group-label">
+        <span class="icon-badge"><img src="assets/icons/confidence.png"></span>
+        <h4>Evolve Confidence</h4>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Improve Accuracy</div>
+        <div class="gdesc">Reduce errors and rework, and produce data you can defend to auditors, regulators, and LPs.</div>
+        <div class="gspark">{{ priority_dots(goals.accuracy) }}</div>
+      </div>
+      <div class="goal-row">
+        <div class="gname">Elevate Client Experience</div>
+        <div class="gdesc">Deliver transparent, trustworthy results that drive retention, re-ups, and referrals.</div>
+        <div class="gspark">{{ priority_dots(goals.client_experience) }}</div>
+      </div>
+    </div>
+
+    <div class="evolve-group">
+      <div class="evolve-group-label">
+        <span class="icon-badge"><img src="assets/icons/capability.png"></span>
+        <h4>Evolve Capability</h4>
+      </div>
+      {%- if results.industry == 'Accounting' %}
+      <div class="goal-row">
+        <div class="gname">Expand Advisory Services</div>
+        <div class="gdesc">Turn compliance data into advisory-grade insight and new service lines that raise billable value.</div>
+        <div class="gspark">{{ priority_dots(goals.advisory_services) }}</div>
+      </div>
+      {%- else %}
+      <div class="goal-row">
+        <div class="gname">Elevate Decision Support</div>
+        <div class="gdesc">Turn compliance data into decision-grade insight that guides investment, planning, and stakeholder reporting.</div>
+        <div class="gspark">{{ priority_dots(goals.advisory_services) }}</div>
+      </div>
+      {%- endif %}
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; {{ results.company }}</span>
+    <span>02</span>
+  </div>
+</div>
+</body></html>

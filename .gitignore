@@ -1,0 +1,6 @@
+# Byte-compiled / cache
+__pycache__/
+*.pyc
+
+# Local QA/preview tool output (real visitor data renders + PDFs) -- never shared
+tools/preview_output/

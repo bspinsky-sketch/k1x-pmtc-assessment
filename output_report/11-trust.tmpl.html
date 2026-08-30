@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>PMTC Output Report -- Scaled. Trusted. Proven.</title>
+<link rel="stylesheet" href="assets/base.css">
+<style>
+.lede strong { font-weight:700; color:#1E1E1E; }
+
+.page { z-index:0; }
+.bg-wave { position:absolute; inset:0; background:url('assets/bg/wave-gold-strong.png') center / cover no-repeat; z-index:-1; pointer-events:none; }
+
+.stat-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:28px 16px; padding-top:14px; margin-bottom:26px; }
+.stat-tile { background:#0A0A0A; border-radius:10px; padding:16px 14px; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:104px; }
+.stat-num { font-weight:800; font-size:34px; letter-spacing:-0.02em; color:var(--gold); line-height:1; margin-bottom:8px; }
+.stat-cap { font-weight:700; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:rgba(255,255,255,.72); line-height:1.3; }
+
+.trust-panel { width:496px; position:absolute; right:64px; bottom:61px; }
+.trust-card { width:100%; background:rgba(255,255,255,.88); border-radius:10px; padding:14px 24px; display:flex; align-items:center; gap:20px; box-sizing:border-box; }
+.trust-card:first-child { padding-top:22px; }
+.trust-card:last-child { padding-bottom:9px; }
+.trust-card + .trust-card { margin-top:21px; }
+.trust-label { width:88px; flex-shrink:0; font-weight:700; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#6E6E68; }
+.trust-logos { flex:1; display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; }
+.trust-logos img { width:auto; display:block; }
+.trust-note { font-weight:600; font-size:10.5px; letter-spacing:.03em; line-height:1.35; color:#3A3A36; text-align:center; }
+.soc-group { display:flex; flex-direction:column; align-items:center; gap:5px; }
+.logo-irs { height:46px; }
+.logo-nactp { height:34px; }
+.logo-soc { height:42px; }
+.logo-aprio { height:22px; }
+.logo-cima { height:24px; }
+.logo-agn { height:30px; }
+.header-scrim { position:absolute; left:0; right:0; top:0; height:160px; background:linear-gradient(to bottom, rgba(255,255,255,.94) 0%, rgba(255,255,255,.85) 45%, rgba(255,255,255,0) 100%); z-index:-1; pointer-events:none; }
+</style></head>
+<body>
+<div class="page">
+  <div class="bg-wave"></div>
+  <div class="header-scrim"></div>
+  <div class="h1">Scaled. Trusted. Proven.</div>
+  <div class="lede">Addressing a <strong>$27 billion</strong> annual industry burden, in a market that's <strong>over 90% unserved</strong>. Built for accounting firms, funds, family offices, fund admins, and tax-exempt organizations processing Schedule K-1s and 990s in volume.</div>
+
+  <div class="stat-grid">
+    <div class="stat-tile"><div class="stat-num">151</div><div class="stat-cap">Top Accounting Firms</div></div>
+    <div class="stat-tile"><div class="stat-num">20</div><div class="stat-cap">Of the Top 25 Accounting Firms</div></div>
+    <div class="stat-tile"><div class="stat-num">2</div><div class="stat-cap">Of the Big Four Accounting Firms</div></div>
+    <div class="stat-tile"><div class="stat-num">79</div><div class="stat-cap">Leading Universities &amp; Endowments</div></div>
+    <div class="stat-tile"><div class="stat-num">85</div><div class="stat-cap">Top Institutional Investors</div></div>
+    <div class="stat-tile"><div class="stat-num">44</div><div class="stat-cap">Of Largest 100 Institutional Investors</div></div>
+    <div class="stat-tile"><div class="stat-num">40K+</div><div class="stat-cap">Organizations Trust K1x</div></div>
+    <div class="stat-tile"><div class="stat-num">$175M</div><div class="stat-cap">Growth Investment by Sumeru Equity Partners, April 2026</div></div>
+  </div>
+
+  <div class="trust-panel">
+  <div class="trust-card">
+    <div class="trust-label">Certified by</div>
+    <div class="trust-logos">
+      <img class="logo-irs" src="assets/trust-logos-v2/irs-efile-v2.png">
+      <img class="logo-nactp" src="assets/trust-logos-v2/nactp-v2.png">
+      <div class="soc-group"><img class="logo-soc" src="assets/trust-logos-v2/aicpa-soc-v2.png"><span class="trust-note">SOC 2 Certified<br>7216 Compliant</span></div>
+    </div>
+  </div>
+  <div class="trust-card">
+    <div class="trust-label">Connected</div>
+    <div class="trust-logos">
+      <img class="logo-aprio" src="assets/trust-logos-v2/aprio-v2-wordmark-only.png">
+      <img class="logo-cima" src="assets/trust-logos-v2/aicpa-cima-v2.png">
+      <img class="logo-agn" src="assets/trust-logos-v2/agn-v2.png">
+    </div>
+  </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PMTC Assessment Report &middot; {{ results.company }}</span>
+    <span>11</span>
+  </div>
+</div>
+</body></html>

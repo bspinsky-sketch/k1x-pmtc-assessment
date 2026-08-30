@@ -18,3 +18,8 @@
 2026-08-30 01:00 EDT -- STANDING_RULES.md read (full, this session)
 2026-08-30 01:00 EDT -- CLAUDE_problems.md read (full, all 1075 lines, this session)
 2026-08-30 01:00 EDT -- protocol complete, compaction event handled per Ben's "Stop - compaction event"
+2026-08-30 02:49 EDT -- CLAUDE.md read (full, this turn, fresh device_bash calls post-compaction)
+2026-08-30 02:49 EDT -- PROJECT_STATE.md read (full, this turn, fresh device_bash calls post-compaction)
+2026-08-30 02:49 EDT -- STANDING_RULES.md read (full, this turn, fresh device_bash calls post-compaction)
+2026-08-30 02:49 EDT -- CLAUDE_problems.md read (full pattern list scanned; P057 added this turn for a 4th banned-write-pattern occurrence caught during this same read)
+2026-08-30 02:49 EDT -- protocol complete, compaction event handled per Ben's "compaction event - follow protocol"
