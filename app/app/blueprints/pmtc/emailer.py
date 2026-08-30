@@ -71,7 +71,7 @@ def _get_client():
         return None
 
 
-def send_report(results, lead):
+def send_report(results, lead, goals=None):
     """Ask the mailer for one report. Never raises.
 
     Args:
@@ -81,6 +81,15 @@ def send_report(results, lead):
                  the mailer only.
         lead:    the dict routes.py assembled from the modal, with at least
                  'email' populated.
+        goals:   the dict from session['goals'] (goal key -> priority 0-4),
+                 not part of `run_calculation()`'s own return -- needed
+                 alongside `results` once the mailer renders the real
+                 Jinja2 Output Report templates (Open Item #2/#17), whose
+                 page 2 needs the visitor's actual goal priorities, not just
+                 the computed results. Defaults to an empty dict so an old
+                 call site that doesn't pass it still sends a valid payload
+                 (today's placeholder generator doesn't read this key at
+                 all, so its absence has never mattered until now).
 
     Returns:
         True if AWS accepted the invocation, False otherwise. The caller uses
@@ -113,7 +122,9 @@ def send_report(results, lead):
             # 15-second timeout, and show the visitor a 504 for a report that
             # was in fact about to be sent perfectly.
             InvocationType='Event',
-            Payload=json.dumps({'results': results, 'lead': lead}).encode('utf-8'),
+            Payload=json.dumps(
+                {'results': results, 'lead': lead, 'goals': goals or {}},
+            ).encode('utf-8'),
         )
         log.info('emailer: report requested for %s via %s', recipient, function_name)
         return True

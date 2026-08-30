@@ -28,3 +28,8 @@
 2026-08-30 13:09 EDT -- STANDING_RULES.md read (full, this turn, via device_bash cat, single call)
 2026-08-30 13:09 EDT -- CLAUDE_problems.md read (full, this turn, via Read tool on saved device_bash cat output, in 5 chunks covering all 1107 lines -- 1-426, 427-626, 628-867, 868-987, 988-1107)
 2026-08-30 13:09 EDT -- protocol complete, compaction event handled per Ben's "compaction event - follow protocol"
+2026-08-30 14:17 EDT -- STANDING_RULES.md read (full, this turn, via device_bash cat, single call) -- compaction-recovery protocol, Ben said "compaction event - follow protocol"
+2026-08-30 14:17 EDT -- PROJECT_STATE.md read (full, this turn, via device_bash cat, single call, all 127 lines)
+2026-08-30 14:17 EDT -- CLAUDE.md read (full, this turn, via device_bash cat + Read tool on saved output in 2 chunks covering all 189 lines)
+2026-08-30 14:17 EDT -- CLAUDE_problems.md read (full, this turn, via device_bash sed + Read tool on saved output, covering all 1123 lines in 4 chunks: 1-300, 300-600, 600-900, 900-1123)
+2026-08-30 14:17 EDT -- protocol complete; found and fixed a real gap during this pass: PROJECT_STATE.md's Authoritative Source Registry and "Current authoritative Git commit" line were still showing e0fb67c, one push stale (the 71d482f P059-writeup push was never logged there)

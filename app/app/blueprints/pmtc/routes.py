@@ -186,7 +186,11 @@ def lead_capture():
     #
     # session['results'] is passed whole rather than picked apart, so that
     # adding a figure to the report later is a change in the mailer only.
-    emailer.send_report(session.get('results') or {}, lead)
+    # session['goals'] goes along too -- not part of run_calculation()'s own
+    # return, but needed once the mailer renders the real Output Report
+    # templates (Open Item #2/#17), whose page 2 needs the visitor's actual
+    # goal priorities, not just the computed results.
+    emailer.send_report(session.get('results') or {}, lead, session.get('goals') or {})
 
     # 'received' is about the lead, and it is honest about it: the modal has
     # already promised a report, and by design nothing here waits long enough
