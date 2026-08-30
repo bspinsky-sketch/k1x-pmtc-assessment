@@ -2,7 +2,7 @@
 
 **Purpose:** Authoritative running state. Read at every session start. Updated whenever an item opens or closes.
 
-**Last updated:** 2026-08-30 03:14 EDT (preview_report.py verified working end to end on a real visitor row, on Ben's own machine -- P058 fix confirmed live. See SESSION_LOG.md.)
+**Last updated:** 2026-08-30 13:07 EDT (Jinja2 templates + preview_report.py committed to main as e997323, pending Ben's push -- see SESSION_LOG.md.)
 
 > **READ `AFTER_YOU_PULL.md` FIRST.**
 > The tool now has a custom domain (`https://k1x-pmtc.geniusdrive.com/`), added
