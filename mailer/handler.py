@@ -1,7 +1,7 @@
 """Take one completed assessment and put a PDF in the visitor's inbox.
 
-The whole pipeline behind the Results page's "Email Report" button: fill the
-deck from the payload, convert it, send it.
+The whole pipeline behind the Results page's "Email Report" button: render
+the real Output Report deck for this visitor, send it.
 
 **Nothing here is allowed to become the visitor's problem.** `routes.py`
 invokes this asynchronously and never waits for it, so the modal has already
@@ -17,14 +17,18 @@ mailer needs a public URL and a shared token in its page because its front end
 is a static site with no backend. This tool has a Flask backend, so the call
 is `lambda:InvokeFunction` from a role, with no public endpoint to find and no
 token shipped to the browser.
+
+**2026-08-31: `generate()` now renders the real 11-page Output Report
+templates via headless Chromium and writes a PDF directly.** The earlier
+python-pptx-plus-LibreOffice placeholder path (draw one slide, convert with
+`soffice`) is gone -- there is no intermediate deck format to convert
+anymore, so this file has one fewer step than it used to.
 """
 
 import json
 import logging
 import os
-import subprocess
 import tempfile
-import time
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -37,8 +41,6 @@ from generate import generate
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
-
-SOFFICE = "/usr/bin/soffice"
 
 # All configuration, so that none of it is a constant somebody has to find.
 SENDER = os.environ.get("REPORT_SENDER", "reports@geniusdrive.com")
@@ -89,37 +91,6 @@ ses = boto3.client("sesv2", region_name=REGION)
 SIGNATURE = "The K1x team\n"
 
 
-def to_pdf(pptx_path, work):
-    """Convert with LibreOffice, in a directory it is allowed to write to.
-
-    `-env:UserInstallation` is not optional. LibreOffice insists on a user
-    profile, everything outside /tmp is read-only on Lambda, and the failure
-    without it does not mention the filesystem.
-
-    A fresh profile directory per invocation rather than a shared one, because
-    a warm container can be handling a second report while the first is still
-    finishing, and two LibreOffice processes will not share a profile.
-    """
-    profile = tempfile.mkdtemp(dir=work)
-    started = time.time()
-    result = subprocess.run(
-        [SOFFICE, "--headless", "--nologo", "--nofirststartwizard",
-         "-env:UserInstallation=file://{}".format(profile),
-         "--convert-to", "pdf", "--outdir", work, str(pptx_path)],
-        capture_output=True, timeout=180, check=False,
-    )
-    pdf = Path(work) / (Path(pptx_path).stem + ".pdf")
-    if result.returncode != 0 or not pdf.exists():
-        raise RuntimeError(
-            "LibreOffice failed ({}): {}".format(
-                result.returncode,
-                result.stderr.decode(errors="replace")[:500]),
-        )
-    log.info("converted to pdf in %.1fs, %d bytes", time.time() - started,
-             pdf.stat().st_size)
-    return pdf
-
-
 def compose(data, pdf):
     """The message, as MIME, because SES needs raw content to carry a file."""
     lead = data.get("lead") or {}
@@ -154,8 +125,10 @@ def compose(data, pdf):
             lines.append('That places you in the "{}" band.'.format(band))
         lines.append("")
     lines.append(
-        "The attachment carries your score, how it compares, where you scored "
-        "highest and the priority areas to improve."
+        "The attachment carries your full Private Market Tax Capability "
+        "Assessment: your score, how it compares, your goals and priorities, "
+        "where you scored highest, and your roadmap for the priority areas to "
+        "improve."
     )
     lines.append("")
     lines.append(SIGNATURE)
@@ -241,7 +214,6 @@ def report(event):
              results.get("company"), results.get("your_score"))
 
     with tempfile.TemporaryDirectory() as work:
-        pptx = Path(work) / "report.pptx"
-        generate(data, str(pptx))
-        pdf = to_pdf(pptx, work)
-        send(compose(data, pdf), recipient)
+        pdf_path = Path(work) / "report.pdf"
+        generate(data, str(pdf_path))
+        send(compose(data, pdf_path), recipient)

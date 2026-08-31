@@ -1,193 +1,160 @@
-"""Build the deck that becomes the PDF.
+"""Build the real Output Report PDF for one visitor's completed assessment.
 
-**This is the placeholder.** Ben's real PMTC report template does not exist
-yet (PROJECT_STATE.md Open Item #2), so rather than block the whole mail
-pipeline on it, this draws a single slide from scratch with python-pptx and
-fills it with the visitor's real computed results. Everything around it -- the
-container, LibreOffice, the fonts, the raw-MIME attachment, SES, the async
-invoke from Flask -- is the final architecture and is exercised for real.
+Renders the 11 locked `output_report/*.tmpl.html` Jinja2 templates against
+the visitor's real `results`/`goals`, then merges the rendered pages into
+one PDF with headless Chromium via Playwright. This is not new rendering
+logic -- it is `tools/preview_report.py`'s own `render_deck()`/
+`try_build_pdf()` functions, already verified against 4 real
+`run_calculation()` scenarios and real Google Sheet rows (see
+PROJECT_STATE.md Open Item #2/#17, CLAUDE.md Key Decisions Log), ported
+here to run inside the mailer instead of a standalone QA script.
 
-The point of drawing something real rather than sending an empty PDF is that
-the parts most likely to break on the day the template lands are the parts a
-placeholder still exercises: that python-pptx output converts at all, how long
-the conversion takes on this memory setting, whether the fonts resolve, and
-whether a multi-megabyte attachment survives SES.
-
-See README.md, "When the real deck arrives", for what replaces this. The
-`generate(data, out_path)` signature is deliberately the one the real
-generator will keep, so `handler.py` does not change when it does.
+Supersedes the earlier python-pptx placeholder (see git history for that
+version, and CLAUDE_problems.md / SESSION_LOG.md for the 2026-08-31 switch).
+The `generate(data, out_path)` signature is unchanged, but `out_path` is now
+written directly as a PDF -- there is no intermediate deck format and no
+LibreOffice conversion step. `output_report/` is baked into this image at
+build time (see Dockerfile and infra/lib/mail-stack.ts) rather than fetched
+at runtime, for the same reason the old placeholder baked in nothing that
+needed a network call: nothing about generating a report should depend on
+anything other than what shipped with the function.
 """
 
-from pptx import Presentation
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
-from pptx.util import Emu, Inches, Pt
+import json
+import re
+import shutil
+import tempfile
+from datetime import date
+from pathlib import Path
 
-# The tool's own palette, lifted from results.html's custom properties so the
-# placeholder is recognisably the same product rather than default Office
-# blue. `ink` is the body colour, `signal` is the highlight behind the current
-# breadcrumb step, `navy_deep` is the results band.
-INK = RGBColor(0x1E, 0x1E, 0x1E)
-INK_SOFT = RGBColor(0x3A, 0x3A, 0x36)
-SLATE = RGBColor(0x6E, 0x6E, 0x68)
-SIGNAL = RGBColor(0xDF, 0xDA, 0x7A)
-NAVY_DEEP = RGBColor(0x06, 0x16, 0x27)
-PAPER = RGBColor(0xFF, 0xFF, 0xFF)
+from jinja2 import Environment, FileSystemLoader
+from playwright.sync_api import sync_playwright
+from pypdf import PdfWriter
 
-# 16:9, which is what any deck K1x supplies will almost certainly be.
-SLIDE_W = Inches(13.333)
-SLIDE_H = Inches(7.5)
+TASK_DIR = Path(__file__).resolve().parent
+OUTPUT_REPORT_DIR = TASK_DIR / "output_report"
 
-# Named here rather than inline so the substitution rule in fonts.conf and the
-# family this asks for cannot drift apart.
-FONT = "Outfit"
+PAGES = [
+    "01-cover.tmpl.html", "02-goals.tmpl.html", "03-how-scored.tmpl.html",
+    "04-capability.tmpl.html", "05-where-you-stand.tmpl.html", "06-solutions.tmpl.html",
+    "07-roadmap.tmpl.html", "08-roadmap.tmpl.html", "09-roadmap.tmpl.html",
+    "10-success-story.tmpl.html", "11-trust.tmpl.html",
+]
+
+# Matches the deck's own fixed canvas (base.css: `.page { width:1280px;
+# height:720px; }`) at 96 DPI -- the same conversion tools/preview_report.py
+# uses, so a page here is pixel-identical to what that tool already proved
+# out against real data.
+_PAGE_W_IN = 1280 / 96
+_PAGE_H_IN = 720 / 96
 
 
-def _textbox(slide, left, top, width, height, text, *, size, bold=False,
-             color=INK, align=PP_ALIGN.LEFT, spacing=None):
-    """One text box, with the paragraph properties set on every run.
+def _level_desc_lookup():
+    """Load CURRENT_DESCRIPTIONS out of roadmap_data.js, the same way
+    tools/preview_report.py does -- the roadmap templates call
+    level_desc(key, level) as a Jinja global, and this JS file (shared with
+    the live assessment page's own maturity-curve JS) is the only place
+    that copy lives."""
+    js_src = (OUTPUT_REPORT_DIR / "assets" / "roadmap_data.js").read_text(encoding="utf-8")
+    m = re.search(r"var CURRENT_DESCRIPTIONS = (\{.*?\n\});", js_src, re.DOTALL)
+    assert m, "Could not locate CURRENT_DESCRIPTIONS in roadmap_data.js"
+    current_descriptions = json.loads(m.group(1))
 
-    python-pptx applies font settings per run, not per shape, so a helper that
-    forgets a run leaves that line in the theme default -- which in a
-    from-scratch presentation is Calibri, not the family fonts.conf has a rule
-    for. Everything drawn here goes through this function for that reason.
+    def level_desc(key, level):
+        return current_descriptions[key]["levels"][int(level)]
+
+    return level_desc
+
+
+def render_pages(results, goals, work_dir):
+    """Render the 11 locked templates against real data into work_dir, with
+    a real copy of assets/ alongside (a real copy, not a symlink -- see
+    CLAUDE_problems.md's preview-tool symlink note; Lambda's /tmp doesn't
+    support symlink games any better than Windows did). Returns the
+    rendered .html paths in deck order."""
+    env = Environment(loader=FileSystemLoader(str(OUTPUT_REPORT_DIR)))
+    env.globals["level_desc"] = _level_desc_lookup()
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(OUTPUT_REPORT_DIR / "assets", work_dir / "assets")
+
+    generated_date = date.today().strftime("%B %-d, %Y")
+
+    html_paths = []
+    for page in PAGES:
+        tmpl = env.get_template(page)
+        html = tmpl.render(results=results, goals=goals, generated_date=generated_date)
+        out_path = work_dir / page.replace(".tmpl.html", ".html")
+        out_path.write_text(html, encoding="utf-8")
+        html_paths.append(out_path)
+    return html_paths
+
+
+def render_pdf(html_paths, out_path, work_dir):
+    """Merge the rendered pages into one PDF with headless Chromium.
+
+    `--no-sandbox`/`--disable-dev-shm-usage` are not cosmetic: Lambda's
+    container has no user namespaces for Chromium's own sandbox to use, and
+    `/dev/shm` is tiny or absent, so real page content (this deck's
+    background images/fonts) crashes Chromium without both flags. This is a
+    documented Chromium-in-Lambda/container requirement, not something
+    carried over from the cloud-workspace preview path, which runs on a
+    normal Linux host and never needed either flag.
     """
-    box = slide.shapes.add_textbox(left, top, width, height)
-    frame = box.text_frame
-    frame.word_wrap = True
-    # Zero the insets. python-pptx defaults a text box to a 0.1in left and
-    # right margin, so a shape placed at 0.75in does not start its text at
-    # 0.75in -- and two boxes at different x values that were meant to share a
-    # left edge end up visibly out of line. Zeroing makes the geometry here
-    # mean what it says.
-    frame.margin_left = 0
-    frame.margin_right = 0
-    frame.margin_top = 0
-    frame.margin_bottom = 0
-    lines = text.split("\n")
-    for index, line in enumerate(lines):
-        para = frame.paragraphs[0] if index == 0 else frame.add_paragraph()
-        para.alignment = align
-        if spacing is not None:
-            para.line_spacing = spacing
-        run = para.add_run()
-        run.text = line
-        run.font.name = FONT
-        run.font.size = Pt(size)
-        run.font.bold = bold
-        run.font.color.rgb = color
-    return box
+    page_pdf_dir = work_dir / "_pdf_pages"
+    page_pdf_dir.mkdir(exist_ok=True)
 
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"],
+        )
+        page = browser.new_page(
+            viewport={"width": 1280, "height": 720}, device_scale_factor=2,
+        )
+        pdf_pages = []
+        for i, html_path in enumerate(html_paths, 1):
+            page.goto("file://" + str(html_path))
+            page.wait_for_timeout(500)
+            try:
+                page.evaluate("document.fonts && document.fonts.ready")
+            except Exception:
+                pass
+            page.wait_for_timeout(200)
+            out_pdf = page_pdf_dir / f"{i:02d}.pdf"
+            page.pdf(
+                path=str(out_pdf), width=f"{_PAGE_W_IN}in", height=f"{_PAGE_H_IN}in",
+                print_background=True,
+                margin={"top": "0in", "bottom": "0in", "left": "0in", "right": "0in"},
+            )
+            pdf_pages.append(out_pdf)
+        browser.close()
 
-def _band(slide, left, top, width, height, color):
-    """A flat colour rectangle with no outline, used as a rule or a fill."""
-    from pptx.enum.shapes import MSO_SHAPE
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color
-    shape.line.fill.background()
-    shape.shadow.inherit = False
-    return shape
+    writer = PdfWriter()
+    for one_page_pdf in pdf_pages:
+        writer.append(str(one_page_pdf))
+    with open(out_path, "wb") as f:
+        writer.write(f)
+    return out_path
 
 
 def generate(data, out_path):
-    """Write the deck for one assessment to `out_path`.
+    """Write the real 11-page Output Report PDF for one assessment to
+    `out_path`.
 
     `data` is the payload `emailer.py` sends: the whole `run_calculation()`
-    result under "results", plus the lead-capture fields under "lead". Read
-    defensively -- a missing key here must not be the reason a visitor never
-    gets their report.
+    result under "results", the visitor's goal priorities under "goals"
+    (needed by page 2), and lead-capture fields under "lead" (unused here --
+    the report templates need the visitor's scores and goals, not their
+    contact info). Read defensively -- a missing key here must not be the
+    reason a visitor never gets their report.
     """
     results = data.get("results") or {}
-    lead = data.get("lead") or {}
+    goals = data.get("goals") or {}
 
-    company = results.get("company") or lead.get("company") or "Your firm"
-    industry = results.get("industry") or ""
-    your_score = results.get("your_score")
-    peer_score = results.get("peer_score")
-    peer_count = results.get("peer_count")
-    band_name = results.get("band_name") or ""
-    band_subtitle = results.get("band_subtitle") or ""
-    narrative = results.get("narrative") or ""
-    strengths = results.get("strengths") or []
-    gaps = results.get("gaps") or []
+    with tempfile.TemporaryDirectory(dir="/tmp") as work:
+        work_dir = Path(work)
+        html_paths = render_pages(results, goals, work_dir)
+        render_pdf(html_paths, out_path, work_dir)
 
-    prs = Presentation()
-    prs.slide_width = SLIDE_W
-    prs.slide_height = SLIDE_H
-    # Layout 6 is the blank one in the default template. Anything else brings
-    # placeholder shapes that would need deleting.
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-
-    _band(slide, 0, 0, SLIDE_W, Inches(1.45), NAVY_DEEP)
-    _textbox(slide, Inches(0.75), Inches(0.34), Inches(11.8), Inches(0.4),
-             "K1X PRIVATE MARKET TAX CAPABILITY ASSESSMENT",
-             size=12, bold=True, color=SIGNAL)
-    _textbox(slide, Inches(0.75), Inches(0.66), Inches(11.8), Inches(0.6),
-             company, size=28, bold=True, color=PAPER)
-
-    top = Inches(1.95)
-    if industry:
-        _textbox(slide, Inches(0.75), top, Inches(11.8), Inches(0.3),
-                 industry.upper(), size=11, bold=True, color=SLATE)
-
-    # The score, the peer score and the band. The three numbers the Results
-    # page leads with, in the same order.
-    _textbox(slide, Inches(0.75), Inches(2.35), Inches(3.0), Inches(1.2),
-             "" if your_score is None else "{:.1f}".format(your_score),
-             size=72, bold=True, color=INK)
-    _textbox(slide, Inches(0.75), Inches(3.55), Inches(3.0), Inches(0.3),
-             "YOUR MATURITY SCORE (0-5)", size=10, bold=True, color=SLATE)
-
-    peer_line = "Peer leaders: {}".format(
-        "" if peer_score is None else "{:.1f}".format(peer_score))
-    if peer_count:
-        peer_line += "   (n={})".format(peer_count)
-    _textbox(slide, Inches(0.75), Inches(3.95), Inches(4.0), Inches(0.3),
-             peer_line, size=13, color=INK_SOFT)
-
-    _textbox(slide, Inches(4.6), Inches(2.4), Inches(8.0), Inches(0.5),
-             band_name, size=26, bold=True, color=INK)
-    if band_subtitle:
-        _textbox(slide, Inches(4.6), Inches(2.95), Inches(8.0), Inches(0.4),
-                 band_subtitle, size=15, color=SLATE)
-    _textbox(slide, Inches(4.6), Inches(3.45), Inches(8.0), Inches(1.6),
-             narrative, size=12, color=INK_SOFT, spacing=1.3)
-
-    _band(slide, Inches(0.75), Inches(5.25), Inches(11.83), Emu(12700), SIGNAL)
-
-    _textbox(slide, Inches(0.75), Inches(5.45), Inches(5.5), Inches(0.3),
-             "WHERE YOU SCORED HIGHEST", size=11, bold=True, color=SLATE)
-    strength_lines = "\n".join(
-        "{}   {}".format(
-            item.get("name", ""),
-            "" if item.get("score") is None else "{:.1f}".format(item["score"]),
-        )
-        for item in strengths
-    )
-    _textbox(slide, Inches(0.75), Inches(5.8), Inches(5.5), Inches(1.2),
-             strength_lines, size=13, color=INK, spacing=1.35)
-
-    _textbox(slide, Inches(6.9), Inches(5.45), Inches(5.7), Inches(0.3),
-             "PRIORITY AREAS TO IMPROVE", size=11, bold=True, color=SLATE)
-    gap_lines = "\n".join(
-        "{}   {}".format(
-            item.get("name", ""),
-            "" if item.get("delta") is None else "{:+.1f} vs peers".format(item["delta"]),
-        )
-        for item in gaps
-    )
-    _textbox(slide, Inches(6.9), Inches(5.8), Inches(5.7), Inches(1.2),
-             gap_lines, size=13, color=INK, spacing=1.35)
-
-    # Said on the artifact itself, not only in the covering email. A PDF gets
-    # forwarded and read away from the message that carried it, and a reader
-    # who cannot tell a placeholder from the deliverable will assume this is
-    # the deliverable.
-    _textbox(slide, Inches(0.75), Inches(7.0), Inches(11.8), Inches(0.3),
-             "Placeholder layout. The full K1x report template is in "
-             "preparation; the figures above are your real results.",
-             size=9, color=SLATE)
-
-    prs.save(out_path)
     return out_path

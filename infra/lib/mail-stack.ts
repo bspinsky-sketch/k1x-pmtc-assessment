@@ -187,8 +187,14 @@ export class MailStack extends Stack {
     const generator = new lambda.DockerImageFunction(this, 'ReportMailer', {
       functionName,
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(__dirname, '..', '..', 'mailer'),
+        // Build context is the repo root, not `mailer/`, as of 2026-08-31 --
+        // the image now bakes in `output_report/`'s templates and assets
+        // (see Dockerfile), which live outside `mailer/` and would not be
+        // visible to the Docker build otherwise. `file` points at the real
+        // Dockerfile's location within that wider context.
+        path.join(__dirname, '..', '..'),
         {
+          file: 'mailer/Dockerfile',
           // Matching the machine this is built and tested on, and the
           // architecture the app's own Lambda already uses.
           platform: Platform.LINUX_ARM64,

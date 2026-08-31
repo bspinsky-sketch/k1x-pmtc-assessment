@@ -1,39 +1,31 @@
 # The report mailer, as a Lambda container image.
 #
-# A container rather than a zip because LibreOffice is the hard dependency
-# here: turning the filled deck into a PDF is the whole job, LibreOffice is
-# the only thing that does it faithfully, and it does not fit a zip package.
-# That is also why this function is separate from `PmtcApp`, which stays a
-# small pure-Python zip that needs no Docker at deploy time.
+# A container rather than a zip because headless Chromium is the hard
+# dependency here: rendering the real Output Report templates to PDF is the
+# whole job, and Chromium does not fit a zip package any more than
+# LibreOffice did. That is also why this function is separate from
+# `PmtcApp`, which stays a small pure-Python zip that needs no Docker at
+# deploy time.
 #
-# Debian rather than the AWS Python base image, following the same reasoning
-# proven on the sibling SMOMA project: LibreOffice is packaged for Debian and
-# was verified working there. Using an arbitrary base image on Lambda is
-# supported -- `awslambdaric` is the runtime interface client that makes any
-# image speak Lambda's protocol.
+# 2026-08-31: switched from LibreOffice (converting a python-pptx
+# placeholder deck) to Playwright + headless Chromium (rendering the real
+# 11-page `output_report/*.tmpl.html` Jinja2 templates directly to PDF).
+# See CLAUDE_problems.md and SESSION_LOG.md for the full writeup. Debian
+# stays the base image -- proven working here already, and Playwright's own
+# install path targets Debian/Ubuntu directly.
 FROM debian:bookworm-slim
 
-# LibreOffice, and only the part that opens presentations. Writer and Calc are
-# several hundred megabytes this never touches.
-#
-# The fonts matter as much as the converter, and this is the lesson that cost
-# the sibling project a render: with none of these installed, fontconfig
-# answers an unknown family with Liberation Mono, and every heading in the
-# report comes out as typewriter text at widths nothing was laid out for.
-# Carlito and Liberation Sans are metric-compatible stand-ins for Calibri and
-# Arial, so anything using those two keeps its line breaks exactly.
+# python3-pip for the Lambda runtime interface client and this function's
+# own dependencies. Chromium's own runtime libraries (fonts, graphics,
+# audio/video codecs it links against even headless) are not bundled with
+# the pip wheel -- `playwright install --with-deps` below pulls them via
+# apt, which is why apt itself has to stay available through that step
+# rather than being cleaned up first.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      libreoffice-impress \
-      fonts-crosextra-carlito \
-      fonts-liberation2 \
-      fontconfig \
       python3 \
       python3-pip \
+      ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-
-# What to substitute for the families this image does not have. See the file.
-COPY fonts.conf /etc/fonts/conf.d/99-pmtc.conf
-RUN fc-cache -f
 
 # --break-system-packages because Debian 12 marks the system Python as
 # externally managed (PEP 668). In a single-purpose container there is no
@@ -41,24 +33,42 @@ RUN fc-cache -f
 # remember.
 RUN pip3 install --no-cache-dir --break-system-packages \
       awslambdaric==3.1.1 \
-      python-pptx==1.0.2 \
-      boto3==1.40.19
+      boto3==1.40.19 \
+      jinja2==3.1.4 \
+      pypdf==5.0.1 \
+      playwright==1.47.0
+
+# Where Chromium's own binary lands, set *before* `playwright install` runs
+# so the browser is installed here and not under whatever $HOME happens to
+# be at build time. This matters specifically because Lambda's `/tmp` is a
+# separate ephemeral storage volume mounted fresh at *runtime*, distinct
+# from the image's own filesystem layers -- anything written under `/tmp`
+# during the build (which is what Playwright's default cache path,
+# `~/.cache/ms-playwright`, would resolve to once HOME is set to `/tmp` for
+# the LibreOffice-era reason below) would not actually be present when the
+# function runs. `/opt` is part of the image itself and is read-only but
+# present at runtime, which is exactly what a baked-in browser binary needs.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+RUN playwright install --with-deps chromium
 
 WORKDIR /var/task
 
-COPY generate.py handler.py ./
+COPY mailer/generate.py mailer/handler.py ./
+# The 11 locked report templates and their shared assets (CSS, fonts,
+# background images, the K1x logo, roadmap_data.js), baked into the image
+# so rendering a report needs nothing at runtime beyond what shipped here --
+# same principle the old placeholder followed by baking in nothing that
+# needed a network call. Build context is the repo root (see
+# infra/lib/mail-stack.ts), which is why this path is relative to that root
+# rather than to this Dockerfile's own directory.
+COPY output_report/ ./output_report/
 
-# When Ben's template lands it is baked in here, alongside the code that
-# fills it, so the deck and the filling code are one artifact and cannot be
-# at different versions:
-#
-#     COPY master.pptx ./
-#
-# See README.md, "When the real deck arrives".
-
-# LibreOffice wants somewhere to write a user profile, and everything outside
-# /tmp is read-only on Lambda. Without this it fails on the first conversion
-# with an error that does not mention the filesystem.
+# Chromium needs somewhere writable for its own runtime profile/cache, and
+# everything outside /tmp is read-only on Lambda -- the same reason
+# LibreOffice needed this before. generate.py also explicitly creates its
+# working directory under /tmp rather than relying on this alone, but
+# Chromium's own internal temp usage (independent of that working
+# directory) still needs HOME to point somewhere writable.
 ENV HOME=/tmp
 
 ENTRYPOINT ["/usr/bin/python3", "-m", "awslambdaric"]

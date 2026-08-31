@@ -1,22 +1,25 @@
 # Sending the report
 
-This directory is one Lambda function: it takes a completed assessment, builds
-a deck, converts it to PDF, and emails it. `infra/lib/mail-stack.ts` is the
-AWS side.
+This directory is one Lambda function: it takes a completed assessment,
+renders the real 11-page Output Report as PDF, and emails it.
+`infra/lib/mail-stack.ts` is the AWS side.
 
-**The deck it builds today is a placeholder.** Ben's real PMTC report template
-does not exist yet (PROJECT_STATE.md Open Item #2). Rather than leave the
-whole delivery path unbuilt until it does, `generate.py` draws a single slide
-from scratch and fills it with the visitor's real computed results. Everything
-around that -- the container, LibreOffice, the fonts, the raw-MIME attachment,
-SES, the asynchronous invoke from Flask -- is the final architecture and runs
-for real.
+**As of 2026-08-31, `generate.py` renders the real deck.** It runs the 11
+locked `output_report/*.tmpl.html` Jinja2 templates -- the same templates
+`tools/preview_report.py` already verified against 4 real
+`run_calculation()` scenarios and real Google Sheet rows (PROJECT_STATE.md
+Open Item #2/#17) -- against the visitor's actual `results`/`goals`, then
+merges the rendered pages into one PDF with headless Chromium via
+Playwright. `output_report/` is baked into this image at build time (see
+Dockerfile); nothing is fetched at runtime.
 
-That is the point of a placeholder that draws something rather than an empty
-PDF: the parts most likely to break on the day the template lands are the
-parts a placeholder still exercises. Whether python-pptx output converts at
-all, how long the conversion takes at this memory setting, whether the fonts
-resolve, whether a multi-megabyte attachment survives SES.
+This replaces the earlier python-pptx placeholder (one slide, drawn from
+scratch, converted with LibreOffice) that shipped first so the rest of the
+pipeline -- the container, the raw-MIME attachment, SES, the asynchronous
+invoke from Flask -- could be built and proven real before the report
+template existed. That architecture is unchanged; only what fills the PDF
+is different. See CLAUDE_problems.md and SESSION_LOG.md (2026-08-31) for
+the switch.
 
 ## What is already done, and did not have to be
 
@@ -144,25 +147,34 @@ oversights:**
    names the person this report should come from, add them to `SIGNATURE` in
    `handler.py` **and** re-point `replyTo` in the same change.
 
-## When the real deck arrives
+## The 2026-08-31 switch to the real deck
 
-Nothing about the architecture changes. Three steps:
+The three steps this section used to describe as future work are done. What
+actually changed:
 
-1. Drop `master.pptx` into this directory and add `COPY master.pptx ./` to the
-   `Dockerfile` (the line is already written there as a comment). Baked into
-   the image rather than fetched from S3, so the deck and the code that fills
-   it are one artifact and cannot be at different versions.
-2. Replace `generate.py`'s body with the real fill. Keep the
-   `generate(data, out_path)` signature and `handler.py` does not change at
-   all.
-3. Delete the "Placeholder layout" line at the bottom of the slide, and the
-   paragraph at the top of this file.
+`generate.py` was rewritten around `tools/preview_report.py`'s own
+`render_deck()`/`try_build_pdf()` logic -- rendering the 11 locked
+`output_report/*.tmpl.html` templates with Jinja2, then merging them to one
+PDF with headless Chromium via Playwright. `handler.py`'s `report()` lost a
+step: there is no `to_pdf()`/LibreOffice conversion anymore, because
+`generate()` now writes the PDF directly. `Dockerfile` swapped
+`libreoffice-impress`/`python-pptx` for Playwright + Chromium, with
+`PLAYWRIGHT_BROWSERS_PATH` pinned to `/opt/pw-browsers` (not under `/tmp`,
+which is a separate ephemeral volume at Lambda runtime and would not carry
+over anything baked in there at build time) and `--no-sandbox
+--disable-dev-shm-usage` on the Chromium launch (Lambda has no user
+namespaces for Chromium's own sandbox, and `/dev/shm` is tiny or absent).
+`infra/lib/mail-stack.ts`'s Docker build context widened from `mailer/` to
+the repo root (with `file: 'mailer/Dockerfile'`) so the build can see
+`output_report/`, which is now `COPY`'d into the image.
 
-Before writing any fill code, run the shape audit from `PPT_CONVENTIONS.md`
-Part 2 and push only to shapes confirmed empty -- a pre-filled shape keeps its
-formatting and overwriting strips it (STANDING_RULES.md, python-pptx rules).
-
-Recheck `fonts.conf` against whatever the real deck names. The rule for
-`Outfit` is a judgement call about which installed face is closest, and if K1x
-can license the real font for a server, dropping the .ttf files into the image
-and deleting the rule always beats a substitution.
+`fonts.conf` (the LibreOffice font-substitution rules for a hypothetical
+PowerPoint deck) is no longer used -- the real templates already reference
+the real `Outfit` font files directly via `@font-face` in `output_report/
+assets/fonts/`, and Chromium renders those natively. The file is left in
+place, unreferenced, rather than deleted mid-deadline; safe to remove in a
+later pass. One pre-existing, already-documented gap carries over
+unaffected: `Outfit-Medium.ttf` (weight 500) is missing from that fonts
+directory, confirmed harmless in CLAUDE_problems.md P061 -- Chromium falls
+back to a sibling Outfit weight within the same family rather than a
+different font, the same behavior already verified for the live templates.
