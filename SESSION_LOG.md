@@ -1195,3 +1195,14 @@ Ben signing off. State to pick up next time: P061's docs correction (CLAUDE_prob
 - Set infra/cdk.json context.bcc directly via the bridge shell (single-key edit, secrets untouched) and updated infra/cdk.example.json's bcc value/comment to match, so the committed template stays in sync with the real operational value (matching how sender/replyTo/notify are already real values in that file).
 - Ben redeployed PmtcMail from infra/ -- fast as predicted (16.74s deploy / 38.78s total, no Docker rebuild since only a Lambda env var changed). Stack output confirms directly: PmtcMail.ReportBcc = tiana.maher@k1x.io,scott.turner@k1x.io.
 - Told Ben to run the live-app test once more and check the CloudWatch log line (handler.py logs exactly who was BCC'd on every send) to confirm the actual send used the new addresses, since BCC is blind by design and can't be confirmed by checking an inbox.
+
+### [2026-08-31 12:59 EDT]
+- Ben ran `git push origin main`: `1888a1c..0a454d2 main -> main`, 6 objects, 2.78 KiB, clean push confirmed.
+- Registry table and current-commit line in PROJECT_STATE.md updated to `0a454d2`.
+- Everything from today's mailer work -- the real HTML-to-PDF Output Report mailer (Open Item #2/#17) and the K1x BCC follow-up -- is now committed, pushed, deployed, and verified live, ahead of the client meeting.
+
+### [2026-08-31 13:03 EDT]
+- Ben asked whether all the project tracking docs are current. Real audit, not assumed: git status clean (real diff was just PROJECT_STATE.md/SESSION_LOG.md's own not-yet-committed record of the last push, same lag pattern as this session's very first task); CLAUDE_problems.md current (no new incidents this segment); PROJECT_STATE.md content accurate.
+- Found CLAUDE.md genuinely stale: its mailer file-locations row (line 67) still described "currently LibreOffice + python-pptx" / "conversion... open and in progress," wrong since today's real conversion shipped. Fixed. Also found the Key Decisions Log had zero entries for today's actual architecture work -- the real HTML-to-PDF/Chromium conversion, the Lambda Chromium-sandbox crash root cause/fix, the .dockerignore build-context fix, and the BCC follow-up. Added all four, matching the log's existing depth/style.
+- Cleaned up two scratch files left over from today's log-diagnosis work (mailer_log2.txt, mailer_log_full.txt) -- not project artifacts, deleted. tools/diagnose_row_skew.py/repair_row_skew.py left untouched -- pre-existing, unrelated to today, still an open pending-fate item from before this segment.
+- Asked Ben whether to commit and push this documentation catch-up.
