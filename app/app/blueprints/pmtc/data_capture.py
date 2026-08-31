@@ -59,7 +59,6 @@ emailer.py once Q3 (email delivery) is confirmed, if wanted.
 import json
 import logging
 import os
-import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -179,27 +178,56 @@ def capture_result(company, industry, goals, results, row_number=None):
             )
             return row_number
 
-        # append_row()'s table-detection did not honor table_range's
-        # column boundaries on a real live capture (2026-08-28): with
-        # table_range anchored at B (FIRST_DATA_COL), the actual write
-        # still landed one column to the left, starting at A -- confirmed
-        # directly against the real Sheet, not just inferred from code
-        # review. The exact mechanism inside the Sheets API/gspread's
-        # "find the table, append after it" logic isn't pinned down, but
-        # the fix doesn't need to be: pad the values with one leading
-        # blank for column A (harmless -- that column is manually
-        # maintained by Ben and was never meant to be written here
-        # anyway) and widen table_range's left edge to match, so wherever
-        # the API actually anchors the write, the real Timestamp value
-        # lands in B as intended, Company in C, and so on.
-        padded_row = [''] + row
-        resp = sheet.append_row(
-            padded_row, value_input_option='USER_ENTERED',
-            table_range=f'A{DATA_START_ROW}:{LAST_DATA_COL}{DATA_START_ROW}',
+        # 2026-08-28 (P045): append_row()'s table-detection landed the
+        # write one column LEFT of table_range's stated boundary (real
+        # Timestamp value found in column A instead of B). Compensated at
+        # the time by padding one leading blank onto the values and
+        # widening table_range's left edge to match.
+        #
+        # 2026-08-30: the same table-detection landed FOUR separate real
+        # captures one column RIGHT of intended instead -- the opposite
+        # drift, under the unchanged padded-row/table_range code above.
+        # One of those four rows lost real data: its true last assessment
+        # value drifted into column AD, which update_lead_info()'s fixed
+        # AD:AG write later overwrote with the visitor's first name.
+        # Recovered by re-running the row's own goals/ratings back through
+        # run_calculation() and confirming every other stored field
+        # (your_score, peer_score, peer_count, both surviving gaps)
+        # reproduced exactly -- see SESSION_LOG.md 2026-08-30 for the
+        # repair. Two confirmed drifts in opposite directions from the
+        # same call is proof the anchor point isn't reliably pinned to
+        # any fixed offset -- it depends on Sheet state in ways neither
+        # occurrence's investigation could fully pin down, exactly what
+        # P045's own "rule for future projects" warned this heuristic was
+        # capable of ("prefer an explicit target range over an
+        # auto-detecting append").
+        #
+        # Fix: stop asking the Sheets API to find the table at all. Read
+        # column B (Timestamp, FIRST_DATA_COL) to find the real next
+        # empty row ourselves -- the same approach preview_report.py's
+        # --list already uses to find the last captured row -- and write
+        # there with an explicit range via sheet.update(), the exact same
+        # call the row_number-provided branch above uses. That branch has
+        # never shown any drift across every row captured this project,
+        # in either direction, because an explicit range leaves the API
+        # nothing to auto-detect.
+        #
+        # Note: reading col_values() then writing is two round trips, not
+        # one atomic operation, so two captures landing in the same
+        # instant could in principle compute the same next_row and one
+        # would silently overwrite the other's row. append_row() carried
+        # an equivalent risk under its own undocumented auto-detection;
+        # this isn't a new exposure, just a differently-shaped version of
+        # the same one, and worth knowing about if concurrent captures
+        # ever need a real fix (e.g. row_number reservation, a lock).
+        next_row = len(sheet.col_values(2)) + 1
+        if next_row < DATA_START_ROW:
+            next_row = DATA_START_ROW
+        sheet.update(
+            f'{FIRST_DATA_COL}{next_row}:{LAST_DATA_COL}{next_row}',
+            [row], value_input_option='USER_ENTERED',
         )
-        updated_range = resp.get('updates', {}).get('updatedRange', '')
-        match = re.search(r'(\d+)(?::|$)', updated_range.split('!')[-1])
-        return int(match.group(1)) if match else None
+        return next_row
 
     except Exception as exc:
         log.warning('data_capture: capture_result failed: %s', exc)
