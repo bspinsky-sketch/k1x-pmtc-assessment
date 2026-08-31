@@ -1183,3 +1183,15 @@ Ben signing off. State to pick up next time: P061's docs correction (CLAUDE_prob
 - **CONFIRMED: real email arrived with the correct real 11-page HTML-to-PDF deck, including actual session data.** The Chromium launch-flag fix (--disable-gpu/--single-process/--no-zygote) resolved the TargetClosedError crash.
 - **Open Item #2/#17 is now fully LIVE and VERIFIED end-to-end**, well ahead of the client meeting. PROJECT_STATE.md's Open Item #17 status and the ACTIVE/TIME-CRITICAL banner (now deleted per its own closing instruction) both updated to reflect this.
 - Three local changes remain uncommitted on Ben's machine: mailer/generate.py (Chromium launch-flag fix, just verified), Application/.dockerignore (the build-context-stall fix), and mailer/try_mailer.py (goals payload fix, added earlier, not yet re-verified against the new IAM-permission finding but harmless either way). Asked Ben whether to commit and push now.
+
+### [2026-08-31 12:39 EDT]
+- Ben ran `git push origin main` from his own terminal (from Application/, after cd'ing out of infra/): `62c3167..1888a1c main -> main`, 8 objects, 11.13 KiB, clean push confirmed.
+- Authoritative Source Registry table and current-commit line in PROJECT_STATE.md updated to reflect `1888a1c` as current.
+- **Open Item #2/#17 is now fully closed: code fixed, committed, pushed, deployed, and verified live** -- all before the client meeting. Ben separately confirmed a second successful real-report email as well, further confirming per-session data wiring works correctly across repeat requests.
+
+### [2026-08-31 12:50 EDT]
+- Ben asked about setting up K1x BCC recipients on report emails. Confirmed this was already plumbed in (REPORT_BCC env var, mail-stack.ts -> handler.py, comma-separated) and just left empty pending K1x naming someone -- no code change needed, no SES/domain verification needed either (geniusdrive.com already verified + account already has SES production access).
+- Ben supplied: tiana.maher@k1x.io, scott.turner@k1x.io.
+- Set infra/cdk.json context.bcc directly via the bridge shell (single-key edit, secrets untouched) and updated infra/cdk.example.json's bcc value/comment to match, so the committed template stays in sync with the real operational value (matching how sender/replyTo/notify are already real values in that file).
+- Ben redeployed PmtcMail from infra/ -- fast as predicted (16.74s deploy / 38.78s total, no Docker rebuild since only a Lambda env var changed). Stack output confirms directly: PmtcMail.ReportBcc = tiana.maher@k1x.io,scott.turner@k1x.io.
+- Told Ben to run the live-app test once more and check the CloudWatch log line (handler.py logs exactly who was BCC'd on every send) to confirm the actual send used the new addresses, since BCC is blind by design and can't be confirmed by checking an inbox.

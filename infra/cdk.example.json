@@ -64,7 +64,7 @@
     "//notify": "Where SES bounce and complaint notices go. AWS emails this address once to confirm the SNS subscription; until somebody clicks it, the topic notifies nobody.",
     "notify": "tklute@geniusdrive.com",
 
-    "//bcc": "Who is blind-copied on every report, comma-separated. Empty as of 2026-08-28: K1x has not said who. It lives here rather than as a deploy-script argument on purpose -- the copy is blind, so a deploy that dropped it would look completely normal and nobody would notice until the reader asked why reports had stopped.",
-    "bcc": ""
+    "//bcc": "Who is blind-copied on every report, comma-separated. Set 2026-08-31 per Ben/K1x: tiana.maher@k1x.io, scott.turner@k1x.io. It lives here rather than as a deploy-script argument on purpose -- the copy is blind, so a deploy that dropped it would look completely normal and nobody would notice until the reader asked why reports had stopped.",
+    "bcc": "tiana.maher@k1x.io,scott.turner@k1x.io"
   }
 }
