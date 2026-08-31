@@ -1097,3 +1097,89 @@ Ben signing off. State to pick up next time: P061's docs correction (CLAUDE_prob
 - Checked SES message-size limit before trusting the larger real PDF would send: SESv2 (the sesv2 client handler.py already uses) supports up to 40MB per message as of 2022, confirmed via AWS's own announcement pages. The 5.9MB deck is well within that -- the old ~28KB placeholder never tested this limit, so it was worth checking rather than assuming.
 - **Not verified, and flagged to Ben as the one real remaining risk:** neither this cloud sandbox nor the bridge shell has a running Docker daemon, so the actual container build (Debian bookworm-slim, playwright install --with-deps chromium, ARM64, awslambdaric) has not been built or run end to end against the real Lambda target -- only the Python rendering logic itself, on a different OS/arch. This is the same category of gap P059 already burned this project on once (local/sandbox verification passing, the real Lambda import failing). cdk deploy PmtcMail from Ben's own machine will be the first real build of this image.
 - Not yet committed -- holding for Ben's explicit go-ahead given this changes the live mailer, per STANDING_RULES.md Git Rules and the explicit-confirmation rule.
+
+### [2026-08-31 10:42 EDT]
+- Ben: "proceed." Committed the mailer real-deck wiring from the bridge shell with Ben's go-ahead: `62c3167` (7 files: PROJECT_STATE.md, SESSION_LOG.md, infra/lib/mail-stack.ts, mailer/Dockerfile, mailer/README.md, mailer/generate.py, mailer/handler.py). `git diff --ignore-all-space --stat` confirmed these were the only real changes; line-ending-noise files and the two undecided scratch scripts left alone as before. Not pushed -- push and `cdk deploy PmtcMail` are Ben's from his own machine. Recommended he run one real `try_mailer.py` test send immediately after deploying, before relying on this for the client meeting, since the actual container build has not been verified from this side.
+
+### [2026-08-31 10:45 EDT]
+- Ben confirmed push success (screenshot): `30e1ab0..62c3167 main -> main`. Updated PROJECT_STATE.md registry/current-commit line accordingly. Still pending, time-critical: cdk deploy PmtcMail (first real container build) and a real try_mailer.py test send, before the client meeting.
+
+### [2026-08-31 11:00 EDT]
+- `cdk deploy PmtcMail` blocked: Docker is not installed on Ben's machine at all (not just stopped) -- confirmed after `docker` was "not recognized" even in a fresh PowerShell window. Recommended falling back to the current live (placeholder-layout, already-verified) mailer for today's meeting and revisiting the real deploy afterward, without time pressure.
+- Ben: "unacceptable. take me through the docker install and start tracking progress in case a compaction event occurs." Overriding the fallback recommendation -- his call, with full context on his own timeline. Proceeding with a live Docker Desktop install walkthrough.
+- Added an ACTIVE/TIME-CRITICAL banner at the top of PROJECT_STATE.md (right after the purpose line, ahead of the AFTER_YOU_PULL banner) with a live progress checklist, specifically so a compaction mid-install leaves the next session unable to miss it or lose track of where things stood. Will check it off step by step and update SESSION_LOG.md at each real checkpoint (not just at the end).
+- Note: all Windows-side actions (WSL/Docker install itself) have to be run by Ben in his own PowerShell -- this session's device_bash reaches a separate Linux VM bridge, not Ben's actual Windows shell, so it can't run the installer or wsl commands directly. Only the doc-tracking and later file/deploy-adjacent work happens from this side.
+
+### [2026-08-31 11:02 EDT]
+- WSL2 status checked: not installed. `wsl --version`/`wsl -l -v` both just printed the generic help text (legacy pre-install stub behavior) and `wsl --status` returned exit code 50. Next: `wsl --install` from an elevated PowerShell, which needs Admin rights and will likely trigger a restart since it's turning on Windows optional features, not just installing an app.
+
+### [2026-08-31 11:05 EDT]
+- `wsl --install` (elevated) succeeded: Virtual Machine Platform, WSL, and Ubuntu all installed. Requires a reboot -- confirmed by wsl.exe's own output. Ben is rebooting now. Flagged to him that this will drop the device-bridge connection and he'll need to reopen/relink the Claude desktop app afterward. Tracker updated with the exact resume point (verify WSL2, then move to the Docker Desktop installer) so this is recoverable regardless of what happens to this session across the reboot.
+
+### [2026-08-31 11:13 EDT]
+- Ben back post-reboot, device bridge reconnected on its own. Verified WSL2 is now active (wsl --status gives real output, Default Version: 2) -- the core platform requirement Docker needs. wsl -l -v shows no installed distro (the wsl --install-triggered Ubuntu setup did not complete), but confirmed this doesn't block Docker Desktop, which brings its own WSL2-backed distros. Moving straight to the Docker Desktop installer download/install -- no further WSL troubleshooting needed.
+
+### [2026-08-31 11:18 EDT]
+- Docker Desktop installed and running, no second restart needed. Next: confirm docker info actually works from the infra/ deploy shell before retrying cdk deploy PmtcMail.
+
+### [2026-08-31 11:20 EDT]
+- docker info succeeded from the infra/ directory (fresh PowerShell window picked up the PATH update). Docker Desktop fully working: WSL2 kernel confirmed (6.18.33.2-microsoft-standard-WSL2), engine running. Docker install blocker fully cleared -- moving to the actual cdk deploy PmtcMail now.
+
+### [2026-08-31 11:24 EDT]
+- Docker blocker fully cleared; cdk deploy PmtcMail hit a second, unrelated blocker: "mailDomain is not set in cdk.json context." bin/app.ts's mailDomain switch -- Ben's local infra/cdk.json (gitignored) never had the mail-related keys added, since it predates that section of cdk.example.json or was never backfilled. Fix in progress: patch those keys in via PowerShell, safely (no secrets printed/touched).
+
+### [2026-08-31 11:44 EDT]
+- Deploy stalled: no Docker Desktop activity at all after several minutes, but the cdk/npx Node.js process actively using disk/CPU. Root cause identified: mail-stack.ts's build context was widened to the repo root earlier today with no .dockerignore, so CDK's own asset-staging step was trying to copy/hash the entire repo (node_modules, .git/LFS, cdk.out) -- confirmed by `du` on the repo root timing out after 2 minutes in this session's own diagnostic. Added Application/.dockerignore (deny-all, allow mailer/ and output_report/ only). Ben instructed to Ctrl+C and retry.
+
+### [2026-08-31 11:46 EDT]
+- Retry hit "expired token" -- the earlier aws configure export-credentials STS token expired given how much real time the WSL/Docker install + stalled-deploy diagnosis consumed. Not a new bug, just needs a fresh export before retrying cdk deploy PmtcMail (now with .dockerignore in place).
+
+### [2026-08-31 12:00 EDT]
+- Ben re-exported expired AWS STS credentials and retried `npx cdk deploy PmtcMail --require-approval never`.
+- Full pasted output confirmed the `.dockerignore` fix resolved the earlier stall: Docker build streamed immediately, both COPY steps (mailer code, output_report/) completed instantly.
+- Docker build succeeded completely on the real ARM64 target, including `playwright install --with-deps chromium` (Chromium 129.0.6668.29 + ffmpeg to /opt/pw-browsers/chromium-1134) -- confirms the PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers Dockerfile design is correct end-to-end on the actual deploy target, not just in the cloud-workspace verification.
+- Image exported OK as cdkasset-a116a594c0107b594871fd6956a75a3aaa43de1ba45cf9ef25f5a8a4f975f4ae.
+- `docker push` to ECR then failed on layer 25817457b2c0: "write tcp 192.168.65.3:52716->192.168.65.1:3128: write: broken pipe" -- through Docker Desktop's own internal proxy (matches HTTP Proxy/HTTPS Proxy: http.docker.internal:3128 from the earlier successful `docker info`). Diagnosed as a likely transient network hiccup on a large (~250MB) layer, not a structural failure.
+- Recommended fix given to Ben: retry `npx cdk deploy PmtcMail --require-approval never` as-is -- image is already built and cached locally, so Docker layer caching should skip the ~2min build phase and go straight to re-pushing.
+- PROJECT_STATE.md banner checklist and header timestamp updated to reflect this checkpoint per Ben's compaction-survival tracking request.
+
+### [2026-08-31 12:04 EDT]
+- Ben retried `npx cdk deploy PmtcMail --require-approval never` with no changes -- Docker layer cache skipped the entire build, and the push succeeded this time (52.77s deploy, 152.03s total). Confirms the broken-pipe error diagnosed above was a one-off network blip through Docker Desktop's internal proxy, not a structural problem.
+- **PmtcMail is now LIVE with the real HTML-to-PDF mailer** (Chromium/Playwright-based, replacing the python-pptx/LibreOffice placeholder). Outputs: MailerFunctionName=pmtc-report-mailer, ConfigurationSetName=pmtc-report-mail, AlertsTopicArn set, ReportSender=reports@geniusdrive.com, ReportReplyTo=tklute@geniusdrive.com, ReportBcc=none.
+- CDK's own post-deploy output (`PmtcMail.NextStep`, generic boilerplate that fires on every PmtcMail deploy) suggested confirming an SNS subscription email and redeploying PmtcApp. Checked infra/lib/app-stack.ts: PmtcApp invokes the mailer via a hardcoded static function name (`pmtc-report-mailer`, REPORT_MAILER_FUNCTION constant) and grants itself invoke permission by the same static ARN pattern -- neither depends on any MailStack CDK output. The function name/ARN are unchanged from before this deploy (container image updated in place). Concluded: PmtcApp redeploy is NOT needed. The SNS subscription (bounce/complaint alert emails) is a nice-to-have, not blocking -- told Ben he can confirm it whenever, it does not affect report sending.
+- Gave Ben the real test-send command: `python mailer\try_mailer.py <email> --async` (async, matching how the tool itself invokes, to avoid a false-negative client-side timeout on this first real cold start) followed by tailing CloudWatch logs to confirm the send actually completes.
+- Remaining before trusting this for the client meeting: confirm the test email actually arrives with the correct real 11-page deck attached.
+
+### [2026-08-31 12:13 EDT]
+- try_mailer.py hit the expired-credentials error again (STS creds from the deploy had aged out); re-exported per the now-familiar pattern, reran.
+- New error on rerun: AccessDeniedException -- Ben's personal IAM user (`ben`) has no lambda:InvokeFunction grant on arn:aws:lambda:us-east-1:019163347448:function:pmtc-report-mailer. This is a real, separate gap (not a deploy bug): try_mailer.py invokes directly with Ben's own AWS credentials, which were never given blanket Lambda-invoke rights.
+- Diagnosed this as non-blocking for the client meeting: the production path (a visitor on the live site requesting their report) goes through PmtcApp's own Lambda execution role, which app-stack.ts already grants lambda:InvokeFunction on this exact function, unconditionally, independent of Ben's personal IAM user. Verified by re-reading the REPORT_MAILER_FUNCTION grant in app-stack.ts (same code read earlier when confirming PmtcApp did not need redeploying).
+- Decision: do not modify Ben's personal IAM permissions under time pressure (a security-settings change, and appropriately something Claude should not execute directly regardless of urgency) -- instead run the real end-to-end test through the live app itself, which is more representative of what the client meeting will actually exercise. Noted the IAM grant as a non-blocking optional follow-up for whenever there's admin time (Ben or Tristen).
+- Told Ben to go to https://k1x-pmtc.geniusdrive.com/, run (or reuse) an assessment, request the emailed report, and confirm the real 11-page deck arrives.
+- Ben is running this test now. Waiting on the result.
+
+### [2026-08-31 12:14 EDT]
+- Ben ran the real end-to-end test through the live app. Lead/results data capture completed correctly, but the report email never arrived.
+- Async Lambda invocation (which is what the production path uses, same as try_mailer.py --async) returns 202 "accepted" regardless of whether the mailer function itself actually completes and sends -- so this failure is invisible from the app side and only diagnosable via CloudWatch logs on the mailer function itself.
+- Told Ben to check spam/junk as a fast parallel check, and to tail /aws/lambda/pmtc-report-mailer logs to find the real error.
+
+### [2026-08-31 12:18 EDT]
+- Ben pulled CloudWatch logs (`aws logs tail /aws/lambda/pmtc-report-mailer --since 20m`) -- CloudWatch read access worked fine even without the lambda:InvokeFunction grant, as expected.
+- Logs confirm: the mailer DID run (RequestId 2c99639d-1a6d-4b90-9f0a-7e58de42e004, generating for bpinsky@geniusdrive.com / company ReportTest2), and DID fail -- traceback shows the crash at generate.py render_pdf() -> browser.new_page(...), meaning Chromium launched but died/became unusable before a page could be created. Billed duration 77.7s, max memory 449MB/3008MB (not a memory-limit issue).
+- The actual exception message (the line after the wrap_api_call frame, normally "playwright._impl._errors.Error: ...") was missing from what got pasted -- truncated somewhere in terminal/paste, not yet diagnostic.
+- Also observed an INIT_REPORT line showing Status: timeout at ~9999ms -- this matches AWS's documented container-image cold-start behavior (image pull/unpack for a brand-new image exceeding the ~10s implicit init budget gets deferred into first-invocation billed time) and is plausible as benign for this image's very first real invocation, not assumed to be the root cause of the new_page() crash.
+- Asked Ben to re-pull the same log stream via aws logs get-log-events redirected to a file, to get the full untruncated exception text.
+
+### [2026-08-31 12:25 EDT]
+- Full error text (via the JSON-based log pull, avoided the earlier truncation): playwright._impl._errors.TargetClosedError: Browser.new_page: Target page, context or browser has been closed.
+- Root cause: this is a well-documented Chromium-on-Lambda failure mode. Chromium's normal architecture forks a separate "zygote" process per tab/renderer; that fork does not survive cleanly inside Lambda's restricted sandbox, so the browser process dies right after launch, before new_page() can complete.
+- Fix applied directly on Ben's machine (mailer/generate.py, render_pdf): added --disable-gpu, --single-process, --no-zygote to the existing chromium.launch() args (--no-sandbox, --disable-dev-shm-usage). Docstring extended to document why, matching the file's existing style of explaining Lambda-specific flags. Not yet committed -- CDK builds from the local filesystem regardless of git state, so this can be tested via redeploy first.
+- Sanity-checked the new args in the cloud workspace with a minimal Playwright smoke test (launch + new_page + trivial PDF) -- succeeded with no errors. This does not reproduce the Lambda sandbox crash itself (different environment) but confirms the flags are valid and don't break Playwright's own API.
+- Told Ben to redeploy (npx cdk deploy PmtcMail --require-approval never) and retest via the live app.
+
+### [2026-08-31 12:36 EDT]
+- Ben's redeploy hit "--app is required either in command-line, in cdk.json or in ~/.cdk.json" -- he ran it from Application/ instead of Application/infra/ (where cdk.json actually lives). Fixed by cd'ing into infra/ first.
+- Redeploy succeeded from the correct directory. Ben reran the live-app test end to end (Profile -> Assessment -> Results -> request emailed report).
+- **CONFIRMED: real email arrived with the correct real 11-page HTML-to-PDF deck, including actual session data.** The Chromium launch-flag fix (--disable-gpu/--single-process/--no-zygote) resolved the TargetClosedError crash.
+- **Open Item #2/#17 is now fully LIVE and VERIFIED end-to-end**, well ahead of the client meeting. PROJECT_STATE.md's Open Item #17 status and the ACTIVE/TIME-CRITICAL banner (now deleted per its own closing instruction) both updated to reflect this.
+- Three local changes remain uncommitted on Ben's machine: mailer/generate.py (Chromium launch-flag fix, just verified), Application/.dockerignore (the build-context-stall fix), and mailer/try_mailer.py (goals payload fix, added earlier, not yet re-verified against the new IAM-permission finding but harmless either way). Asked Ben whether to commit and push now.

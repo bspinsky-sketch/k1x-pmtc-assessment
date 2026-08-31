@@ -1,0 +1,13 @@
+# Scopes the PmtcMail Docker build context (now the repo root, as of the
+# 2026-08-31 switch to the real HTML-to-PDF mailer -- see
+# infra/lib/mail-stack.ts) down to exactly what mailer/Dockerfile actually
+# COPYs: mailer/generate.py, mailer/handler.py, output_report/. Without
+# this, both CDK's own asset-hashing/staging step and the docker build
+# itself have to walk the ENTIRE repo -- infra/node_modules/,
+# infra/cdk.out/, .git (with LFS blobs), app/, tools/preview_output/,
+# wireframe/ and all -- none of which the image needs. Added after that
+# exact thing caused a deploy to stall for minutes with zero Docker
+# activity, confirmed by `du` itself timing out on the repo root.
+*
+!mailer
+!output_report

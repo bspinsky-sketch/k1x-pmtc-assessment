@@ -100,6 +100,18 @@ def render_pdf(html_paths, out_path, work_dir):
     documented Chromium-in-Lambda/container requirement, not something
     carried over from the cloud-workspace preview path, which runs on a
     normal Linux host and never needed either flag.
+
+    `--single-process`/`--no-zygote`/`--disable-gpu` were added 2026-08-31 after
+    the first real Lambda invocation: with only the two flags above, Chromium
+    launched but then died before `new_page()` could run --
+    `playwright._impl._errors.TargetClosedError: Browser.new_page: Target page,
+    context or browser has been closed`. Root cause: Chromium's normal
+    multi-process model forks a zygote process per tab/renderer, and that fork
+    does not survive Lambda's restricted sandbox. `--single-process` keeps
+    everything in one process (no fork needed) and `--no-zygote` disables the
+    zygote pre-fork server directly; `--disable-gpu` removes another common
+    crash source in headless containers with no GPU device. This combination is
+    the standard, widely-documented fix for headless Chromium under AWS Lambda.
     """
     page_pdf_dir = work_dir / "_pdf_pages"
     page_pdf_dir.mkdir(exist_ok=True)
@@ -107,7 +119,13 @@ def render_pdf(html_paths, out_path, work_dir):
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage"],
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--single-process",
+                "--no-zygote",
+            ],
         )
         page = browser.new_page(
             viewport={"width": 1280, "height": 720}, device_scale_factor=2,

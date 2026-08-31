@@ -58,6 +58,22 @@ SAMPLE = {
         "email": None,  # filled from the command line
         "opt_in": True,
     },
+    # Added 2026-08-31 alongside the real HTML-to-PDF generator -- page 2 of
+    # the real deck reads goal priorities directly, and this payload had no
+    # "goals" key (it predates emailer.py forwarding session['goals'],
+    # commit 7e74547). Without it the old placeholder never noticed, since
+    # it never read this key either; the real templates read it defensively
+    # (missing -> {}) so this omission would not have crashed the render,
+    # only made this test less representative than the real payload it is
+    # standing in for.
+    "goals": {
+        "reduce_time": 3,
+        "standardize": 4,
+        "scalable_growth": 2,
+        "accuracy": 4,
+        "client_experience": 3,
+        "advisory_services": 2,
+    },
 }
 
 
