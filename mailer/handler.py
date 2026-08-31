@@ -28,6 +28,7 @@ anymore, so this file has one fewer step than it used to.
 import json
 import logging
 import os
+import re
 import tempfile
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -91,6 +92,27 @@ ses = boto3.client("sesv2", region_name=REGION)
 SIGNATURE = "The K1x team\n"
 
 
+FILENAME_PREFIX = "K1x Private Market Tax Capability Assessment for "
+FILENAME_SUFFIX = ".pdf"
+# 255 characters is the practical filename-length ceiling most filesystems
+# (NTFS included) enforce -- subtract the fixed prefix/suffix around the
+# company name to get the budget left for it. Computed, not hardcoded, so a
+# future change to the prefix text can't quietly leave this stale.
+MAX_COMPANY_LEN = 255 - len(FILENAME_PREFIX) - len(FILENAME_SUFFIX)
+
+
+def _safe_filename_fragment(text):
+    """Company names come from user input, not our own copy -- strip anything
+    that breaks a filename or a Content-Disposition header (path separators,
+    quotes, control characters), collapse whitespace, truncate to what fits
+    within a normal filesystem's length limit alongside the fixed prefix/
+    suffix, and fall back to a generic label if nothing usable survives."""
+    cleaned = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", text).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = cleaned[:MAX_COMPANY_LEN].rstrip()
+    return cleaned or "your firm"
+
+
 def compose(data, pdf):
     """The message, as MIME, because SES needs raw content to carry a file."""
     lead = data.get("lead") or {}
@@ -137,7 +159,7 @@ def compose(data, pdf):
     attachment = MIMEApplication(pdf.read_bytes(), _subtype="pdf")
     attachment.add_header(
         "Content-Disposition", "attachment",
-        filename="K1x Private Market Tax Capability Assessment.pdf",
+        filename=FILENAME_PREFIX + _safe_filename_fragment(company) + FILENAME_SUFFIX,
     )
     message.attach(attachment)
     return message
