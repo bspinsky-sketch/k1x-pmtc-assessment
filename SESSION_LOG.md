@@ -1206,3 +1206,29 @@ Ben signing off. State to pick up next time: P061's docs correction (CLAUDE_prob
 - Found CLAUDE.md genuinely stale: its mailer file-locations row (line 67) still described "currently LibreOffice + python-pptx" / "conversion... open and in progress," wrong since today's real conversion shipped. Fixed. Also found the Key Decisions Log had zero entries for today's actual architecture work -- the real HTML-to-PDF/Chromium conversion, the Lambda Chromium-sandbox crash root cause/fix, the .dockerignore build-context fix, and the BCC follow-up. Added all four, matching the log's existing depth/style.
 - Cleaned up two scratch files left over from today's log-diagnosis work (mailer_log2.txt, mailer_log_full.txt) -- not project artifacts, deleted. tools/diagnose_row_skew.py/repair_row_skew.py left untouched -- pre-existing, unrelated to today, still an open pending-fate item from before this segment.
 - Asked Ben whether to commit and push this documentation catch-up.
+
+### [2026-08-31 13:10 EDT]
+- Ben ran `git push origin main`: `0a454d2..002646e main -> main`, 5 objects, 5.72 KiB, clean push confirmed.
+- Registry table and current-commit line updated to `002646e`. All tracking docs are now genuinely current, not just believed to be.
+
+### [2026-08-31 13:17 EDT]
+- Ben flagged an upcoming report content update: Output Report .h1 casing is inconsistent across slides (mix of Title Case and sentence case, one stylized) and needs to be uniform, but he's waiting on the client's preference before deciding which style to standardize on -- not ready to act on yet.
+- Checked the real current state directly (not assumed) rather than just noting the complaint: pulled every page's actual .h1 text via regex against the real output_report/*.html files, and confirmed no CSS text-transform is applied to .h1 anywhere in the deck (the uppercase rules that do exist per page are all on other elements -- footers, eyebrows, small labels), so the inconsistency is genuinely in the raw text content, not a CSS side effect. Also noted 01-cover's hero heading is a separate .title element, not .h1, worth covering in the client's answer too.
+- Logged as Open Item #22 in PROJECT_STATE.md with the full per-page inventory, so this survives compaction and is ready to execute the moment the client answers -- a straightforward text edit to each locked .html and its .tmpl.html sibling, no CSS change needed.
+
+### [2026-08-31 13:19 EDT]
+- Ben added scope to Open Item #22: trailing-period inconsistency on H1s also needs to be uniform (separate from casing), excluding 11-trust which is a deliberate stylistic choice.
+- Checked against the same real inventory already pulled: only 06-solutions ("What closing these gaps looks like.") ends in a period among the 10 .h1-class pages; every other one has none. Added to Open Item #22's writeup.
+
+### [2026-08-31 13:21 EDT]
+- Ben asked to see all remaining open items. Compiling the list surfaced a real staleness bug: Open Item #15(b) still said "nobody is blind-copied yet," even though the BCC work earlier today resolved exactly that. Fixed -- part (b) now marked RESOLVED with the real detail, part (a) (sender domain) remains genuinely open.
+
+### [2026-08-31 13:22 EDT]
+- Continuing the same open-items audit: found Open Item #2's status field still said "OPEN -- what remains is wiring... to real per-user session data" and Open Item #17's status field still opened with "Code converted -- not yet deployed" and closed with "not yet committed/pushed" -- both flatly contradicted by today's real, verified, committed, pushed, deployed work. Fixed both (marked #2 RESOLVED with a cross-reference to #17; cleaned #17's stale leading/trailing phrases, kept its already-present RESOLVED conclusion).
+- Three real staleness bugs caught and fixed in this one audit pass (#15b, #2, #17) -- all were genuinely resolved today but the tracking doc hadn't caught up. Confirms it's worth periodically re-deriving "what's actually open" from real evidence rather than trusting a status field at a glance.
+
+### [2026-08-31 13:23 EDT]
+- Also fixed a stray blank line inside the Open Items table (between #20 and #22) that broke markdown table continuity -- cosmetic, but worth fixing while already auditing this table.
+
+### [2026-08-31 13:25 EDT]
+- Ben: put Open Items #15(a) (sender domain), #13 (page compression), and #16 (mailer log group name) ON HOLD -- waiting on a contract extension, unlikely to move before then. Status fields updated on all three (kept each item's own underlying reason alongside the hold reason -- #15(a) still separately needs K1x's domain decision, #13 still has P059's retry caveat, #16 is still meant to batch with #15).
