@@ -67,6 +67,14 @@
 .zone-card.active.zone-card-scrim { background:linear-gradient(rgba(245,208,0,.16), rgba(245,208,0,.16)), linear-gradient(rgba(8,13,18,.55), rgba(8,13,18,.55)), rgba(255,255,255,.07); }
 .zone-tag { display:inline-block; margin-top:6px; font-family:'Outfit',sans-serif; font-weight:700; font-size:9.5px;
   letter-spacing:.05em; text-transform:uppercase; color:#0A0A0A; background:var(--signal); border-radius:4px; padding:2px 6px; }
+
+/* Dark-photo-background footer override -- page links base.css, which only
+   defines the light-page variant (#9A9A94 text, solid #E4E4DF border). On this
+   page's dark photo background that reads as a stray bright/opaque line among
+   an otherwise all-translucent (rgba(255,255,255,.xx)) glass-card design
+   language -- off-brand. Matches page 5's dark-background footer exactly, the
+   deck's other photo-background page. */
+.page-footer { position:absolute; left:64px; right:64px; bottom:28px; display:flex; justify-content:space-between; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.55); padding-top:12px; border-top:1px solid rgba(255,255,255,.18); }
 </style></head>
 <body>
 <div class="page">
