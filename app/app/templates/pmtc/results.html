@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='pmtc/favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='pmtc/favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='pmtc/favicon-192x192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='pmtc/apple-touch-icon.png') }}">
 <title>K1x Capability Maturity Assessment – Results</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,6 +35,8 @@ a{color:inherit;}
 .bc-link{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px;}
 .bc-link:hover{text-decoration-color:var(--ink);}
 .bc-sep{color:var(--rule);font-size:11px;}
+.bc-restart{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.95);background:rgba(255,255,255,.16);border:none;border-radius:999px;white-space:nowrap;padding:8px 14px 8px 12px;cursor:pointer;transition:background .15s;}
+.bc-restart:hover{background:rgba(255,255,255,.26);}
 
 .page-header{padding:20px 0 32px;}
 .eyebrow{font-family:var(--font-mono);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--slate);margin-bottom:12px;}
@@ -260,7 +266,10 @@ a{color:inherit;}
 .results-band .lede{color:rgba(255,255,255,.82);}
 
 /* footer nav */
-.page-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:16px;padding-top:24px;border-top:1px solid var(--rule);}
+.page-footer{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:16px;padding-top:24px;border-top:1px solid var(--rule);}
+.report-stack{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.so-start-over{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--slate);background:transparent;border:1.5px solid var(--slate);border-radius:999px;white-space:nowrap;padding:7px 14px 7px 12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:background .15s,border-color .15s,color .15s;}
+.so-start-over:hover{background:var(--paper);border-color:var(--ink);color:var(--ink);}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;border-radius:999px;min-height:48px;cursor:pointer;text-decoration:none;transition:background .15s,transform .15s;border:none;}
 .btn-primary{background:var(--ink);color:#fff;padding:15px 26px;}
 .btn-primary:hover{background:var(--ink-soft);}
@@ -328,6 +337,12 @@ a{color:inherit;}
       <a class="bc-step done bc-link" href="{{ url_for('pmtc.assessment_page') }}">2 · Assessment</a>
       <span class="bc-sep">&rsaquo;</span>
       <span class="bc-step current">3 · Results</span>
+      <!-- "Start over" is deliberately the ONLY link/button on this page that ends up
+           pointing at "/" (pmtc.index), which calls session.clear(). Every other link
+           above and in the page footer points at /edit_profile or /assessment. Do not
+           repoint this at those routes, and do not repoint those routes at "/" --
+           see CLAUDE_problems.md P036 for the bug this guards against. -->
+      <button type="button" class="bc-restart" onclick="openRestartModal()">&#8635; Start over</button>
     </nav>
 
     <header class="page-header">
@@ -515,7 +530,12 @@ a{color:inherit;}
 
   <div class="page-footer">
     <a class="btn btn-secondary" href="{{ url_for('pmtc.assessment_page') }}">&larr; Back</a>
-    <button class="btn btn-accent" onclick="openModal()">Get My Report</button>
+    <div class="report-stack">
+      <button class="btn btn-accent" onclick="openModal()">Get My Report</button>
+      <!-- Centered under "Get My Report" by construction (same flex column, align-items:center) --
+           not by a hand-picked offset, so it stays centered if either label's length changes. -->
+      <button type="button" class="so-start-over" onclick="openRestartModal()">&#8635; Start over</button>
+    </div>
   </div>
 
 </div>
@@ -565,6 +585,19 @@ a{color:inherit;}
       <p class="modal-body">We've sent your personalized report to the email address you provided. Check your inbox in a few minutes.</p>
       <button type="button" class="btn btn-secondary modal-submit" onclick="closeModal()">Close</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-scrim" id="restartScrim">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeRestartModal()" aria-label="Close">&times;</button>
+
+    <div class="modal-eyebrow">Start Over</div>
+    <h2 class="modal-h">Start over?</h2>
+    <p class="modal-body">This clears your company info, goals, and all ten capability ratings.</p>
+
+    <button type="button" class="btn btn-primary modal-submit" onclick="closeRestartModal()">Cancel</button>
+    <a class="btn btn-secondary modal-submit" style="margin-top:10px;" href="{{ url_for('pmtc.index') }}">Yes, start over</a>
   </div>
 </div>
 
@@ -740,6 +773,12 @@ function openModal(){
 function closeModal(){
   document.getElementById('modalScrim').classList.remove('open');
 }
+function openRestartModal(){
+  document.getElementById('restartScrim').classList.add('open');
+}
+function closeRestartModal(){
+  document.getElementById('restartScrim').classList.remove('open');
+}
 function submitGate(e){
   e.preventDefault();
   var payload = {
@@ -760,6 +799,9 @@ function submitGate(e){
 }
 document.getElementById('modalScrim').addEventListener('click', function(e){
   if (e.target === this) closeModal();
+});
+document.getElementById('restartScrim').addEventListener('click', function(e){
+  if (e.target === this) closeRestartModal();
 });
 </script>
 </body>

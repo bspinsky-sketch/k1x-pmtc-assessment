@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='pmtc/favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='pmtc/favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='pmtc/favicon-192x192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='pmtc/apple-touch-icon.png') }}">
 <title>K1x Capability Maturity Assessment – Assessment</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -59,10 +63,26 @@ a{color:inherit;}
 .goal-row-head{display:flex;align-items:center;gap:10px;padding:16px 0;}
 .goal-card[data-clickable="true"] .goal-row-head{cursor:pointer;}
 .goal-row-head:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
-.gc-chevron{visibility:hidden;display:inline-flex;width:11px;height:11px;flex-shrink:0;color:var(--ink);transition:transform .18s ease;}
+.gc-chevron{visibility:hidden;display:inline-flex;position:relative;width:11px;height:11px;flex-shrink:0;color:var(--ink);transition:transform .18s ease;}
 .gc-chevron svg{width:100%;height:100%;}
 .goal-card[data-clickable="true"] .gc-chevron{visibility:visible;}
 .goal-card[data-state="open"] .gc-chevron{transform:rotate(90deg);}
+/* §31 -- voluntary close for any currently-open, answered card (frontier,
+   frontierOlder, or a reviewed answer alike). Scoped to the chevron
+   specifically, not the whole header, so an open card can't be closed by a
+   stray click elsewhere on the row -- Ben's mis-click concern once this
+   was generalized beyond just the last capability. Cursor and the
+   enlarged hit target (an invisible ::before matching Profile's
+   .gc-info-toggle 22x22px sizing, via inset rather than real padding so it
+   doesn't disturb the flex row's layout) both apply only while a
+   clickable card is open -- closed cards keep today's whole-header
+   pointer/click-to-open behaviour untouched. Keyboard access is
+   deliberately unaffected: the chevron has no keydown handler of its own,
+   so Enter/Space on the header still only opens/reviews, never closes --
+   confirmed with Ben, not an oversight. */
+.goal-card[data-clickable="true"][data-state="open"] .goal-row-head{cursor:default;}
+.goal-card[data-clickable="true"][data-state="open"] .gc-chevron{cursor:pointer;}
+.goal-card[data-clickable="true"][data-state="open"] .gc-chevron::before{content:'';position:absolute;inset:-5.5px;}
 .gc-name{font-weight:700;font-size:15.5px;flex:1;transition:font-size .15s,font-weight .15s;}
 .goal-card[data-state="open"] .gc-name{font-weight:800;font-size:22px;}
 .gc-score{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);flex-shrink:0;}
@@ -815,6 +835,12 @@ var frontier = 0;
 // values already describe: only the frontier (0) is open.
 var frontierOlder = null;
 var reviewCard = null;
+// §31 -- indices the user has voluntarily closed via the chevron (see
+// closeCard() below). Checked first in isOpen(), so a manual close always
+// wins over the frontier/frontierOlder/reviewCard math beneath it. Cleared
+// for an index the moment that index is reopened (toggleOrReview), so a
+// past close never blocks a later legitimate open.
+var manuallyClosed = {};
 var CAPABILITY_KEYS = ['document_intake','inventory_management','data_extraction','data_validation','data_review','tax_analysis_reporting','integration','resource_structure','advisory','governance_trust'];
 var PREFILL_RATINGS = {{ (ratings if ratings else none) | tojson }};
 
@@ -864,6 +890,7 @@ function setCardState(i, state){
 // value is untouched underneath, so clearing reviewCard snaps the display
 // straight back to the true frontier pair with no separate restore step.
 function isOpen(i){
+  if (manuallyClosed[i]) return false;
   if (reviewCard !== null) return i === frontier || i === reviewCard;
   return i === frontier || i === frontierOlder;
 }
@@ -885,22 +912,42 @@ function syncOpenStates(){
 // for one that's been answered.
 function toggleOrReview(i){
   if (cards[i].dataset.clickable !== 'true') return;
-  if (i === reviewCard){
-    // Closing the review card returns to the frontier pair.
-    reviewCard = null;
-  } else if (!isOpen(i)){
-    // Opening an earlier, closed answer for review joins the two-wide
-    // window as the newest card, pushing frontierOlder out of view (its
-    // value is kept, not cleared – see isOpen()/syncOpenStates() above).
-    reviewCard = i;
-  } else {
-    // Header click on a card that's already open (the active frontier
-    // card, or frontierOlder sitting in its natural slot): nothing to do:
-    // the trailing pair manages its own membership, it isn't manually
-    // collapsed by clicking the card that's already part of it.
-    return;
-  }
+  // §31: closing an already-open card now only ever happens via its
+  // chevron -- see closeCard() below. A header click on a card that's
+  // already open does nothing here, same as this always did for the
+  // two-wide trailing pair; that no-op now also covers an open review
+  // card, which used to close from a header click -- deliberately unified
+  // so the same mis-click protection applies to every open card, not just
+  // the ones this page always kept open.
+  if (isOpen(i)) return;
+  // Opening an earlier, closed answer for review joins the two-wide
+  // window as the newest card, pushing frontierOlder out of view (its
+  // value is kept, not cleared – see isOpen()/syncOpenStates() above).
+  // Also clears any earlier manual close on this index, so a card the
+  // user closed themselves still reopens normally from a header click.
+  reviewCard = i;
+  manuallyClosed[i] = false;
   syncOpenStates();
+}
+
+// §31 -- the chevron-only counterpart to toggleOrReview above. Always
+// marks the card manually closed (checked first in isOpen(), so it wins
+// regardless of anything else the index also happens to be), and clears
+// reviewCard too when this was the review card -- a manually-reopened
+// card can coincide with frontierOlder itself (e.g. the very first
+// capability, reopened after being closed once already), and reviewCard
+// alone isn't enough to close a card that's also a live pair member.
+// Wrapped in the same scroll anchor the automatic advance path already
+// uses (§30) -- closing a card above the user's current focus shifts
+// layout the same way advancing does.
+function closeCard(i){
+  if (cards[i].dataset.clickable !== 'true') return;
+  if (!isOpen(i)) return;
+  withScrollAnchor(cards[i], function(){
+    if (i === reviewCard) reviewCard = null;
+    manuallyClosed[i] = true;
+    syncOpenStates();
+  });
 }
 
 // Anchor a card's on-screen position across a DOM change that shifts layout
@@ -995,6 +1042,19 @@ function buildCard(i){
   chevron.className = 'gc-chevron';
   chevron.setAttribute('aria-hidden', 'true');
   chevron.innerHTML = chevronSvg();
+  // §31 -- closes an open, answered card. Its own click listener (not the
+  // header's), so a click can be told apart: while the card is closed, do
+  // nothing here and let the click bubble up to the header's own
+  // open/review handler unchanged; while it's open, stop the click from
+  // also reaching that handler and close it instead. Guards clickable too,
+  // so the very first card -- open by default before it's ever been
+  // answered -- can never be closed into an unreachable state.
+  chevron.addEventListener('click', function(e){
+    if (cards[i].dataset.state === 'open' && cards[i].dataset.clickable === 'true'){
+      e.stopPropagation();
+      closeCard(i);
+    }
+  });
 
   var nameEl = document.createElement('span');
   nameEl.className = 'gc-name';
@@ -1083,10 +1143,23 @@ function buildCard(i){
 for (var gi = 0; gi < CAPS.length; gi++) buildCard(gi);
 
 if (PREFILL_RATINGS) {
-  var lastAnswered = -1;
-  for (var pi = 0; pi < CAPS.length; pi++) { if (sliders[pi].isSet) lastAnswered = pi; }
-  frontier = Math.min(lastAnswered + 1, CAPS.length - 1);
-  frontierOlder = frontier > 0 ? frontier - 1 : null;
+  // §31 -- PREFILL_RATINGS is only ever set once every capability has been
+  // answered: assessment_submit writes all 10 keys or none (its own nextBtn
+  // click handler blocks submission below full completion), so there is no
+  // partial-save state -- see PROJECT_STATE.md Open Item #23 for the
+  // separate, deliberately-deferred issue that surfaced alongside this
+  // one. Reaching here always means a return to a fully completed
+  // assessment, so load fully collapsed rather than reopening the trailing
+  // pair -- mirroring Profile's own resting state (§26/§28). frontier and
+  // frontierOlder are retired to -1 (no real capability index matches
+  // either), since there's nothing left to advance toward: every
+  // capability now behaves like a reviewed answer -- open it from its
+  // header, it settles back closed when you move on, exactly like
+  // reviewing mid-assessment already does -- or close it early yourself
+  // via its chevron.
+  frontier = -1;
+  frontierOlder = -1;
+  for (var mc = 0; mc < CAPS.length; mc++) manuallyClosed[mc] = true;
   syncOpenStates();
 }
 

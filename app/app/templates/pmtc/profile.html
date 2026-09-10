@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='pmtc/favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='pmtc/favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='pmtc/favicon-192x192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='pmtc/apple-touch-icon.png') }}">
 <title>K1x Capability Maturity Assessment – Profile</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -50,7 +54,20 @@ a{color:inherit;}
 
 /* section */
 .section{margin-bottom:44px;}
-.section-label{font-family:var(--font-mono);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);padding-bottom:10px;border-bottom:2px solid var(--ink);margin-bottom:24px;}
+/* goals section header (§28): a real header + one-line explanation,
+   replacing the old plain-caption .section-label (unused elsewhere in this
+   file -- confirmed before removing it). */
+.goals-head{padding-bottom:14px;border-bottom:2px solid var(--ink);margin-bottom:24px;}
+.goals-head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px;}
+.goals-h2{font-family:var(--font-display);font-weight:800;font-size:27px;letter-spacing:-.015em;line-height:1.1;}
+/* No max-width here on purpose -- the explanation runs the full width of the
+   section, matching the field inputs above it, rather than wrapping early. */
+.goals-explain{font-size:15.5px;color:var(--ink-soft);line-height:1.55;}
+.goals-counter{font-family:var(--font-mono);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink);background:var(--signal);border-radius:999px;padding:6px 13px;white-space:nowrap;flex-shrink:0;}
+/* First-goal interaction hint (§28): only ever attached to goal 1's card,
+   and only shown until that goal is answered -- see buildCard()/handleChange(). */
+.gc-hint{display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.03em;color:var(--slate);margin:-2px 0 14px;}
+.gc-hint svg{width:14px;height:14px;flex-shrink:0;color:var(--slate);}
 
 /* org fields */
 .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -60,11 +77,6 @@ a{color:inherit;}
 .field-input:focus{outline:2px solid var(--ink);outline-offset:2px;}
 select.field-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231E1E1E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:36px;cursor:pointer;}
 
-/* goal group header – plain always-visible, no accordion (§15) */
-.goal-group{margin-bottom:8px;}
-.goal-group-label{font-weight:800;font-size:19px;letter-spacing:-.01em;margin:0;display:flex;align-items:center;gap:10px;padding:14px 0;}
-.icon-badge{width:34px;height:34px;border-radius:50%;background:var(--signal);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
-.icon-badge img{width:20px;height:20px;display:block;}
 
 /* goal cards – single-open accordion with collapse-on-answer (§17 item 4, built and
    client-approved in the altprofile.html preview – see DESIGN_DECISIONS.md §24 – then
@@ -395,31 +407,15 @@ select.field-input{appearance:none;background-image:url("data:image/svg+xml,%3Cs
   </div>
 
   <div class="section">
-    <div class="section-label">What are your goals?</div>
-
-    <div class="goal-group">
-      <div class="goal-group-label">
-        <span class="icon-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTQiIGhlaWdodD0iNTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9Ijc3IiB5PSI2OSIgd2lkdGg9IjU0IiBoZWlnaHQ9IjU0Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXAxIj48cmVjdCB4PSItMC4yNTg2ODgiIHk9Ii0xMjY5OCIgd2lkdGg9IjY4NTcxNCIgaGVpZ2h0PSI3MTExMTEiLz48L2NsaXBQYXRoPjxpbWFnZSB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHhsaW5rOmhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRXNBQUFCTENBTUFBQUFQa0lyWUFBQUFBWE5TUjBJQXJzNGM2UUFBQUFSblFVMUJBQUN4and2OFlRVUFBQUoyVUV4VVJRQUFBQWNIQndrSkNRb0tDZ3NMQ3drSkNRc0xDd2tKQ1FBQUFBZ0lDQW9LQ2dvS0NnZ0lDQUFBQUFrSkNRd01EQUFBQUFvS0Nnb0tDZ29LQ2drSkNRb0tDZ2tKQ1E4UER3b0tDZ2tKQ1FrSkNRc0xDd29LQ2dvS0Nna0pDUXNMQ3hBUUVBQUFBQW9LQ2drSkNRZ0lDQWtKQ1FrSkNRb0tDZ0FBQUF3TURBb0tDZ29LQ2dnSUNBa0pDUW9LQ2dvS0Nna0pDUWtKQ1FrSkNRa0pDUW9LQ2dBQUFBa0pDUXNMQ3dvS0Nnc0xDd0FBQUFzTEN3a0pDUXNMQ3dvS0Nnb0tDZ29LQ2dzTEN3QUFBQWtKQ1FvS0Nnb0tDZ2dJQ0FvS0Nnc0xDd3NMQ3dvS0Nna0pDUTRPRGdvS0Nnb0tDZ2tKQ1EwTkRRc0xDd29LQ2dvS0Nna0pDUXdNREFvS0Nna0pDUWNIQndnSUNBc0xDd29LQ2drSkNRc0xDd3NMQ3dzTEN3c0xDd3NMQ3dzTEN3a0pDUXNMQ3dzTEN3b0tDZ29LQ2dvS0NnWUdCZ3NMQ3dvS0Nna0pDUW9LQ2dBQUFBb0tDaEVSRVFrSkNRb0tDZ0FBQUFvS0Nnb0tDZ3NMQ3dvS0Nna0pDUWtKQ1FvS0NoUVVGQWtKQ1FrSkNRa0pDUXNMQ3dvS0Nna0pDUXNMQ3dvS0Nnc0xDd2dJQ0FvS0NnY0hCd2tKQ1FzTEN3d01EQW9LQ2drSkNRa0pDUXNMQ3drSkNRb0tDZ2dJQ0FvS0Nna0pDUW9LQ2dvS0Nnb0tDZ2tKQ1FvS0NnZ0lDQWtKQ1F3TURBb0tDZ2dJQ0FvS0NnNE9EZ2tKQ1FvS0Nnb0tDZ29LQ2djSEJ3Z0lDQW9LQ2hJU0Vnb0tDZ29LQ2dzTEN3a0pDUWdJQ0FvS0NnQUFBQWtKQ1FvS0Nna0pDUXNMQ3d3TURBb0tDZ29LQ2drSkNRQUFBQWtKQ1FvS0NnME5EUTBORFFvS0Nnb0tDZ2tKQ1FnSUNBb0tDZ3NMQ3drSkNRb0tDZ2tKQ1FzTEN3c0xDd29LQ2dnSUNBb0tDZ29LQ2dvS0Nnb0tDZ3dNREF3TURBb0tDZ29LQ2dvS0NqaW1JdXdBQUFEU2RGSk9Vd0FsYllTT2lubFJCRUg0LzdnQ3dFSUY5bjR4dEdmcEVZSHF2RVl6bjZOZEVBRmw3aUEyaUxBR0svVDZ0KytYM3FMTlVtemlDZWh5WW9zTFNLYVB5c2IralF3ODNOVWYrM2NYNE1NU3lFcS9KbURmb0Rrc3JMTW10UzFPenFhcXAwZDBNT2JCa1JyZHJ5aEQ4ZktyQjU0UDBId0Q5N3RFVUl2cm5RM1lIRG92R2Iyb2hWOGlaQ2VKa0JYSmpITjFPT1BVeFhJMWFKeWtTU0h0S3RzL2dDVmF4K0UwSTBCTER2M1cyUjZiYXdnN2UreGNRZVhFendvMytSUW5hdlZ1bVdQQWNjTlVHR0dZdHBWbVQveEFLZk91TXU0UUp6VUFBQUFKY0VoWmN3QUFDeE1BQUFzVEFRQ2FuQmdBQUFQZlNVUkJWRmhIN2RqNWZ4TkZHTWZ4MVFvVUJqVkFLU0NIQ1VGS2hRSnlDQXFsd1FLdFdLNVdpdHlIeUgwWGxOc3FsNkpBQzNMZm9Cd3FDSWhJdVc5UUVQUS9ZbmJtazgxbU45MXN3dXZsVDMzLzBzeDNubWVhWXpzN3FWR256di9vcFpjelhxbFh2MEVtd3hmUnNKRlFHcjlLOEFKZTAwc0o4VHBCK2dKTldFbzBKVWxmTTFZU0lvc2tmYzFaU1loc2tuUzFhTm1LbGFRM1dwT21wazNiZG04R2pWRDdNTXVnY1FjajlGYkhuUHFkS1BNajkyM1oyTGxMbGw3QkpxOXJOL05IZCtwOHlIeEhOWHJvUVdWeVBlbW9YYS9lbENiVCsxMDZQUFNoTnBtKzFIdnBGYUk0aWZlbzkvUSt4VW4wb3p3cTNEOGpmd0NQb3dxb1Rhb3BEVXBrNEFkbVZqaUlzVEo0aUNyMG8zMFJQVkl4MllkRENhU1BTZ2o5NkVHVEVNT3NOM2s0aVJBai9GNFJ5a2k2aEJoRlloaWhVaUpSUnVMUHgzUUpNWnBFS2ljU1l3ajhLYVJMaUU5SXBQNUVZaXlCUCtQb0VtSThpVFNCU0V3azhHYzBYVUpNSXBHYlI0UklUQ1l4aGFaMEhCVzdSWlZNYlRtT2gxSFRQcVZMWGw3UkRUQXduVVQ2ekxvbnRUYWZiRlowc1JrelpjT3MyWXlVT1hOMWl6SlB2OHBnRG1ObC9nSVZ0cGlvaHd2MWhiTm9zUm8xV2xLaGhxYmNwU3F5TEd2KytSZkxWekRBU3JOdzFXcEdJbU5ObTdWZlZuN0ZTSHl0MWpHdEkvSFMyWHhaNnhtNGJkQXJHVVl4Z1pldytZNXRaT0MyU2E5a0dKV08xNWpJTjJiaEVPdVRkU2lON1c3ZkV0VnU3bVpWK0IxRHArL1ZyRktTVFZhckxicHdLME9uYlhwYWFhQ1NjSlg2WVJlcFZpOXJPeGZVRGhXNi9hQ250WjJsVmJ2NkJZSzdtWXVxMm1Qc25WcXdiMHlscnRyUGNjcmxRS0pONmVBSVprMzdEcTBpaG5VOXVSeWlJbDVzdjg1ei9yS0RUQ1F3YnhFMWNSb3lLeTkvRWkxMCtNaFJKcVJqVzQvLytOTkE4K1NBM1NmMEp4M241Q2xteFRvUzA5N3l1Rk5MdWI3RGJUak5XSm01M1BXdVZUTmwzOGtxZmliVGpnYklmOGtqMFg0bHRweGg0c0JaQWltWERMOFJHOFk1RXUwOGFjeUZTZE1IRkhUSm44SFE5RHZGMmtWU2FST1JGb2srWHk4bktOYitJSlVDUkRoSjdHVUt0ZG9sVWlsSWhEK0p2VnltVnFzSkVqdWZjSTJmdzlBVjJ4bEJPa2RzR010SXRHcFNiOFZ4TzlmU1F1TDRmYVBKSHVJa3JsNHJHMnhkeGVMNkRmTmVzcmtyUTZubzBzMWI5azgrR2Z1ekNHZTF1MjNmTldLWG5EOUJ4K25mWmpzbC90MmgwK1hVV2lyOHE3aExyMU0rQmFtNFI2L1RmZVpUVVVhdjB3UG1VOUNwdGpjL3RRT2FFdjluYVZPVGNJdjJkSU5XdDJsVStIZmMra3ZxOWpEblVmbGYxbGZ6c005dkpYWi9jL0pZb1UrMWo1L29ZZlkvYXBpaXArcitlVDE2ejFkZnppUGRFOXlDZkJsK056SW85cCtMSGMrSy92MlB4K21JKy9LZGFidkQxS25qWWhqUEFXcXcxSVcyT2pDREFBQUFBRWxGVGtTdVFtQ0MiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIGlkPSJpbWcyIj48L2ltYWdlPjxjbGlwUGF0aCBpZD0iY2xpcDMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI2ODU3MTQiIGhlaWdodD0iNjg1NzE0Ii8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTc3IC02OSkiPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMSkiIHRyYW5zZm9ybT0ibWF0cml4KDcuODc1ZS0wNSAwIDAgNy44NzVlLTA1IDc3IDY5KSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAzKSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAwLjAyMzA2NTUgMC4wMTM2NDA5KSI+PHVzZSB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bGluazpocmVmPSIjaW1nMiIgdHJhbnNmb3JtPSJzY2FsZSg5MTQyLjg1IDkxNDIuODUpIj48L3VzZT48L2c+PC9nPjwvZz48L3N2Zz4=" alt="" aria-hidden="true"></span>
-        Evolve Capacity
+    <div class="goals-head">
+      <div class="goals-head-row">
+        <h2 class="goals-h2">What are your goals?</h2>
+        <span class="goals-counter" id="goalsCounter">0 of 6 rated</span>
       </div>
-      <div id="goals-capacity"></div>
+      <p class="goals-explain">Rate how much each of these matters to your organization, from None to Top priority. We'll use your answers to weigh what we recommend in your results.</p>
     </div>
 
-    <div class="goal-group">
-      <div class="goal-group-label">
-        <span class="icon-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTQiIGhlaWdodD0iNTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9Ijc2IiB5PSI3NyIgd2lkdGg9IjU0IiBoZWlnaHQ9IjU0Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXAxIj48cmVjdCB4PSItMTI2OTguMSIgeT0iLTAuMjU4Njg4IiB3aWR0aD0iNzExMTExIiBoZWlnaHQ9IjY4NTcxNCIvPjwvY2xpcFBhdGg+PGltYWdlIHdpZHRoPSI3NSIgaGVpZ2h0PSI3NSIgeGxpbms6aHJlZj0iZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFFc0FBQUJMQ0FNQUFBQVBrSXJZQUFBQUFYTlNSMElBcnM0YzZRQUFBQVJuUVUxQkFBQ3hqd3Y4WVFVQUFBSXhVRXhVUlFBQUFBZ0lDQWtKQ1FvS0Nnb0tDZ3NMQ3cwTkRRQUFBQXNMQ3dvS0Nnb0tDZ29LQ2dnSUNBb0tDZ0FBQUJRVUZBa0pDUWtKQ1FvS0Nna0pDUThQRHcwTkRRb0tDZ2tKQ1FvS0Nnb0tDZ3dNREFBQUFBb0tDZ29LQ2dvS0Nna0pDUWtKQ1FBQUFBNE9EZ3NMQ3dvS0Nnb0tDZ3NMQ3cwTkRRc0xDd2dJQ0FvS0Nnb0tDZ29LQ2dvS0Nna0pDUXNMQ3dvS0Nnc0xDd0FBQUFzTEN3b0tDZ29LQ2drSkNRb0tDZ29LQ2drSkNRa0pDUW9LQ2dvS0Nnb0tDZ2tKQ1FrSkNRQUFBQXNMQ3dvS0Nnb0tDZ29LQ2drSkNRc0xDd0FBQUFrSkNRb0tDZ2tKQ1F3TURBb0tDZ2tKQ1FrSkNRZ0lDQWdJQ0FzTEN3b0tDZ2tKQ1FrSkNRc0xDd2tKQ1FnSUNCQVFFQXNMQ3dvS0Nnd01EQWdJQ0F3TURBY0hCd3NMQ3drSkNRZ0lDQTRPRGhVVkZRb0tDZ2dJQ0FjSEJ3a0pDUXNMQ3dvS0Nna0pDUWtKQ1FvS0Nna0pDUUFBQUFzTEN3a0pDUW9LQ2dzTEN3b0tDZ2tKQ1FvS0Nnb0tDZ2tKQ1FrSkNRb0tDZ2dJQ0F3TURBa0pDUW9LQ2dvS0Nna0pDUW9LQ2drSkNRc0xDd29LQ2dvS0Nnb0tDZ3NMQ3drSkNRb0tDZ29LQ2dvS0Nnb0tDZzBORFF3TURBa0pDUWtKQ1F3TURBa0pDUXNMQ3dzTEN3Y0hCd29LQ2drSkNRa0pDUWtKQ1FvS0Nnb0tDaElTRWdvS0Nnb0tDZ0FBQUFvS0Nnc0xDd29LQ2dnSUNBME5EUW9LQ2drSkNRb0tDZ29LQ2dvS0Nnc0xDd2tKQ1FzTEN3QUFBQW9LQ2drSkNRb0tDZ3NMQ3d3TURBb0tDZ3dNREFrSkNRa0pDUWdJQ0FvS0Nna0pDUVlHQmdrSkNkdzRNSndBQUFDN2RGSk9Vd0Fpak9EOGp5WUJSckw5LzdoTEFnMXMyTnR4RVNpVTh2U1lMQU5QdXY2L1VnUVNkZDdoZVJRd20vYjNvRFJXd3NaYUJoZDk1T2FCR1RpaitQSDZwem9IWHNxQW44NWhDUjJFNmhYaTdJZ2ZJYWY3VkZjdDlGc1FjdHdxdGlrbGtQQzFKUXhvMUNSdVE2MXRoNWVsQ0dEbnlJNS82V3BwSEZFMVBoYUp5WjdvbkR0YitjZDdSYy8xc1dOaUUxaTA3VUtOd0VjanJ0RTM3N212RHRXR0N0MUVrOU1uZzZJYXNMdlpwcVlGaFZqeldTdldQOW5hUVg0YktGazJmUkszQUFBQUNYQklXWE1BQUFzVEFBQUxFd0VBbXB3WUFBQUVDRWxFUVZSWVI2V1krWC9VUkJqR2g4dENSL0JBc1dWbEN5aWdIRlZYRkZxc2lxM1VxaFNvVmRTMlNrR3FDR3hGVkR5aENzcWg0b2szaGFvbzN2ZkZYK2NrK1c0MnMzbmY3TFo4ZjlsOW4rZWQ1N003U1dhU21PcE1tanhsNnBScEYxQ2RCM1hUWjlUYmdQb0xaODVDbXhnWFhYeEpHQlJ4NmV6TDBNZlA1WE91SUtWRVErTmN2SEdSdTNKZW5nU1BwdmtMNktpVmhWZGR6ZGcwaXhZdm9hc1dycmwyS2VOa2xpMWZRV2NWRmpSZng1QXNycitoUUwvT2pTdHZvcnNhTjY5YXpSaVpsdFkxZFByY3dxZFAyNjIzTVM3RjdXdnZvQ2xGKzRxT1pYejF1WE5kSjZPVDNOVjFONzVBdXpIM0xMNlh3bWQ5OXdZU1NtemMxSU1uNHJMY1FibXZTVHpqZWpaTkNqT2d0d0ZkSWN4eTNOOG9OajdRaSsvWUhGMitPcVVzWXg1ODZHRzBKUFdic1UxZjlwbnBLR2NaTTJ0bWYvcXZMaDNBN1VmUVNXWTVIbmwwQzBiTVlPUnNGV2ZVb3lMTG1HMlBiY2VDL0ZDb1AwNlpRU3JMTFpKUDdQQU8vWk9oMmtpVmdaRGwyTEJ6UGI1alZ5anRwc3BBempLbU9Qd1VIWFozS0N5bnlrRExNcWFKRHRzUmxoUCtqd0Y3NkxDTllUbU5LZ005S3o2Y1Q0ZmxYcW9NOUt4bjZMQXJ3L0pacWd6VXJOeFVPdXh6WVQyZktnTTFheDhOMWo0ZjFpOVFaYUJtdlVpRHRkRnU4aEpWQm1yV01BM1dzcy9KcTNrU05ldGxHdXdXaEZlb2RkU3NlSW5aZzdDZldrZk5Pa0NESFVHb3ZsQm9XUnZ4Uzh1RU1hOVM2MmhacitGYlc5b3BPOXNRVkxTc0VYeDdzSWhTdmtBMXRLeEYrUFlRUXVMSWFpaFpjN0d0N1VZeFpqcUtpcEwxT3JhMWI2QzRDYXUycVNsWmg3SHRrWGk2akptQnBpRm5EZUJhZXhRbDRCaWFocHpWald2dG15Z0JiMVU1SzhTc1FyeHZ0QzFFQ2hsRVZSQ3ozc2EwOWpoS1JDK3FncGhWdnZOclJva292b01zSTJXOWkrZHU1eEpITWVBOWRCa3A2MzA4YXllamxCaUtOd0VKSWVzRExIZno5U0ZTekFrY2tYUlc3aU1zYTA4Z2xXbkJFVWxuSlRiQ2o1RVN6TU9TU0dXdC9nVEgyaytSa3JSazNOS2xzajdEY0RkeHdzL0tuTEhLckhYb2poMUlQa1B5ODB0QVJkWkErYzU4VGVvZ1J1ekVUK05uZmY0RnN1TWtXaVdqcDJoSTRXWGxqcU02VG8waXBqaXRUYitYdFF2UmtUK05KakNIbmtxU1djbVpHRU9UR1AyU3Bnb1NXU2VSQXJhci96Q2dUMzdJaXJOeXlWL2UwSWVxMEN0T1dTbHIyMUdFZ0x5L2JBbDAwZWxCMWxmZWc4dlhrWmhCM1JsYWswUlp3OTVybE5hNlVNeWtJRHkyQlZuZmZFc1IwVi85bllLajh5enRaZHBOWWJiL21IZTJZbDNXNkV6dFNxdWF2K01iREVxUC95S0Y3eGxTb3ZLcS8rRkhPbXVnVGp5YU1UL1ZNTzBKZnY2RmNXa2FmcVduWm41TExDd2V2MC9nZFZweFRMb0U4bU9aMTZES0gzOFNVT2F2di9IR1RmRWYvMUkvc3JmbVUwSGczLzNsaC8yZWpuMm9FMlhybWVqa090ajZIOHI1c09SYzExalh1YXJ2RzQzNUg4QUs5RnJ2aVYwVEFBQUFBRWxGVGtTdVFtQ0MiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIGlkPSJpbWcyIj48L2ltYWdlPjxjbGlwUGF0aCBpZD0iY2xpcDMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI2ODU3MTQiIGhlaWdodD0iNjg1NzE0Ii8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTc2IC03NykiPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMSkiIHRyYW5zZm9ybT0ibWF0cml4KDcuODc1ZS0wNSAwIDAgNy44NzVlLTA1IDc2IDc3KSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAzKSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAtMC4wMzI4MzExIDAuMDIzMDY1NSkiPjx1c2Ugd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgeGxpbms6aHJlZj0iI2ltZzIiIHRyYW5zZm9ybT0ic2NhbGUoOTE0Mi44NSA5MTQyLjg1KSI+PC91c2U+PC9nPjwvZz48L2c+PC9zdmc+" alt="" aria-hidden="true"></span>
-        Evolve Confidence
-      </div>
-      <div id="goals-confidence"></div>
-    </div>
-
-    <div class="goal-group">
-      <div class="goal-group-label">
-        <span class="icon-badge"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTQiIGhlaWdodD0iNTQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHhtbDpzcGFjZT0icHJlc2VydmUiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9Ijc2IiB5PSI4MCIgd2lkdGg9IjU0IiBoZWlnaHQ9IjU0Ii8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9ImNsaXAxIj48cmVjdCB4PSItMTI2OTguMSIgeT0iLTAuMDIyMDEzNiIgd2lkdGg9IjcxMTExMSIgaGVpZ2h0PSI2ODU3MTQiLz48L2NsaXBQYXRoPjxpbWFnZSB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHhsaW5rOmhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRXNBQUFCTENBTUFBQUFQa0lyWUFBQUFBWE5TUjBJQXJzNGM2UUFBQUFSblFVMUJBQUN4and2OFlRVUFBQUdxVUV4VVJRQUFBQlFVRkF3TURBa0pDUW9LQ2dnSUNBa0pDUW9LQ2drSkNRb0tDZ29LQ2dvS0Nnb0tDZ29LQ2drSkNRb0tDZ2tKQ1FvS0NnNE9EZ0FBQUFnSUNBa0pDUWtKQ1FvS0Nnb0tDZ2tKQ1FzTEN3c0xDd2tKQ1FvS0Nnb0tDZ2tKQ1E4UER3b0tDZ3NMQ3drSkNRc0xDd2tKQ1FzTEN3a0pDUW9LQ2dBQUFBa0pDUWtKQ1FnSUNBc0xDd2tKQ1FvS0Nna0pDUWtKQ1FvS0Nnb0tDZzBORFFrSkNRa0pDUTBORFFvS0Nnd01EQXNMQ3drSkNRb0tDZ29LQ2dvS0Nnc0xDd0FBQUFrSkNRb0tDZ29LQ2dvS0NnZ0lDQWtKQ1FBQUFBb0tDZ2tKQ1FvS0Nnd01EQWdJQ0FvS0Nnb0tDZ2dJQ0FzTEN3a0pDUW9LQ2dBQUFBd01EQWtKQ1FvS0Nna0pDUUFBQUFvS0Nna0pDUUFBQUFvS0Nnc0xDd29LQ2dzTEN3b0tDZ0FBQUFzTEN3a0pDUWdJQ0FvS0Nna0pDUWtKQ1FZR0Jnb0tDZ29LQ2drSkNRZ0lDQXNMQ3dvS0Nna0pDUW9LQ2dzTEN3b0tDZ0FBQUFvS0NnZ0lDQWtKQ1FzTEN3a0pDUXNMQ3djSEJ4VVZGUW9LQ2drSkNRZ0lDQXNMQ3drSkNRc0xDd2tKQ1FvS0NnZ0lDQWtKQ1FrSkNRQUFBQXdNREFzTEN3a0pDUWNIQndvS0Nnb0tDaTFzUjlnQUFBQ09kRkpPVXdBTlBtMlV0Yy9rOC9yNytQSGgwSmR5U1JJRFA0bk4vUCtITFpEb2hVcS9FY3BJRzZweFhlK1dES0swSUREbTREZndNL2NuNi9JVDJ5dGEyZm03OWtjS3M0Tmo0ajNZQXQySUdVQ1phSklpam5OckJ5dzh4UjRJeHI0R3k0MWtMNnNCd3VkYjVZcTlLTHJIVWo2b2d1NGFYTEVMeVI4MmVPcmFKUXgrMTlRWTdaRTdNYlk1akEwcUxsTWs0OGhPeCt6ZEFBQUFDWEJJV1hNQUFBc1RBQUFMRXdFQW1wd1lBQUFDNDBsRVFWUllSNlhZK1NNVVlSekg4V2NycTdXRVdJc2tTVUs1aTVLMEZDdEhTQ25LV1NwZFNvZlNuZTdqZjI1MjVtM043czQ4ODh6ajlRdnplYjdQeDdJN3N6dUVsc0N1M1h1eWd0bDdRem5oM0x4OVdma0ZoZnRaOGFlb09GSVNMVTBYTGl0aVhWMzVnUXAycHp2SWhLcktRMngwRUs1aVNFbnhZYlk1cTJaTXdaRWE5cmc1eXFDMzJtTnNjVlhIcEpmNkJqWklIR2ZXdzRsOXpNc0VHWlpyYkdKY3FwbHBxWlpXcHVWYUdaZHB5MlhZUXp2ekVpZFBNWnVpb3lMalBBcXh3VjNuYVVadG9uVm5qS2UyNnl5SDZHYUhxNkp6VE5yMG5MZldZcjBFbGx3cmRkZkhvTjBGMWtRczVaRmRKSFhUbjNsMUtSMklzeWhFRjVHcGhOQkZiSkE1dTBzc0d1cnRQNnFYTUdtb1pkaG1oTEVVbzR3bTJDOW1sOGtzWStONTVESVRUQ2Qwa0NWY0lVdVlqSVJJNVdxWU4xd2xNbDBqTkZSTmtYa0pYMmVIRVBsRUNUbjFoRUxjbUNiek5uT1RQZFgyUC8wdFFzTXNrWW9aODVIRjUzbzRObTAvdmZNT0x5UjM0WVdKMGNnQUIraW5TU3d1a1dpN25YeC92RU9pYjV3bUVWZ20wV2RjT1N4M0NmVGRvMG5jN3liUmwzeWpYU0hROTRBbThaQmdCeDVSRldzbTBQZVlLdkdFUU4vcVU2ckcya24wUGFOS3JCSG9hNkJKRkJMb0N6Nm5TcndnMGJiOGtpWWhmRjBmSEt6T1UyVElKdFBVK29xZWhIVkNQYS9icURIRnkzYndtbml6UWN1V3QrWHpLZFNmMlpWT0tsd1ZNT2tsMnVkOXF5SC9GSjgwdUhVK1Myd3c2MkVreHJ6TU80WTlERE11VmNLd0I2VXV6L3NMaTFMWGU0WTlLSFU1ZmFwMG9OUVYrTUMwbkZLWCtLajBXNnAxcVpVcGRpbVZxWGJaeXo3eE5aMXlseGdLbWh1eVAzL1pOTC9KcE40bEp1Y1d2a2ErR1hjRmpleE41Nk1yeWEycmhYVS8zTHFHV1BmRHBVdnBoamlkUzljc3k3NDRkNFhHV1BiRnVTdkNxaitPWFZPVHJQcmoxRFh0NjE5SzJ6SzdvdU42ajhxaGEybVRGZi9TdXBwcUYxblFrTklWK3Y2RFdJdTlhK1Vub2FaZjlCaW56VzhpYllHdzFkVGVwL0ttNzZITXJGcjd3K0dPeE5mLzV2eXI1RUJDaVAvUlZsZEdJY1V4V2dBQUFBQkpSVTVFcmtKZ2dnPT0iIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiIGlkPSJpbWcyIj48L2ltYWdlPjxjbGlwUGF0aCBpZD0iY2xpcDMiPjxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSI2ODU3MTQiIGhlaWdodD0iNjg1NzE0Ii8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTc2IC04MCkiPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMSkiIHRyYW5zZm9ybT0ibWF0cml4KDcuODc1ZS0wNSAwIDAgNy44NzVlLTA1IDc2IDgwKSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAzKSIgdHJhbnNmb3JtPSJtYXRyaXgoMSAwIDAgMSAtMC4wMzI4MzExIC0wLjA5Mzc1KSI+PHVzZSB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bGluazpocmVmPSIjaW1nMiIgdHJhbnNmb3JtPSJzY2FsZSg5MTQyLjg1IDkxNDIuODUpIj48L3VzZT48L2c+PC9nPjwvZz48L3N2Zz4=" alt="" aria-hidden="true"></span>
-        Evolve Capability
-      </div>
-      <div id="goals-capability"></div>
-    </div>
+    <div id="goals-list"></div>
   </div>
 
   <!-- Profile is page 1 (Landing removed, §10) – no Back button. Button stays enabled at all times;
@@ -834,16 +830,23 @@ function goal9Content(){
 // Capabilities); Goal 9's name/desc are seeded from goal9Content() rather than
 // hardcoded, since they're dynamic – see above. ----
 var GOALS = [
-  {section:'goals-capacity', name:'Reduce Cycle Time', desc:'Shorten the time from K-1 receipt to filing-ready data so deadlines are met with less effort.'},
-  {section:'goals-capacity', name:'Centralize & Standardize', desc:'Unify intake, naming, and workflows into one governed source of truth across teams.'},
-  {section:'goals-capacity', name:'Support Scalable Growth', desc:'Absorb rising K-1 volume and complexity without adding proportional headcount or cost.'},
-  {section:'goals-confidence', name:'Improve Accuracy', desc:'Reduce errors and rework, and produce data you can defend to auditors, regulators, and LPs.'},
-  {section:'goals-confidence', name:'Elevate Client Experience', desc:'Deliver transparent, trustworthy results that drive retention, re-ups, and referrals.'},
-  Object.assign({section:'goals-capability'}, goal9Content())
+  {section:'goals-list', name:'Reduce Cycle Time', desc:'Shorten the time from K-1 receipt to filing-ready data so deadlines are met with less effort.'},
+  {section:'goals-list', name:'Centralize & Standardize', desc:'Unify intake, naming, and workflows into one governed source of truth across teams.'},
+  {section:'goals-list', name:'Support Scalable Growth', desc:'Absorb rising K-1 volume and complexity without adding proportional headcount or cost.'},
+  {section:'goals-list', name:'Improve Accuracy', desc:'Reduce errors and rework, and produce data you can defend to auditors, regulators, and LPs.'},
+  {section:'goals-list', name:'Elevate Client Experience', desc:'Deliver transparent, trustworthy results that drive retention, re-ups, and referrals.'},
+  Object.assign({section:'goals-list'}, goal9Content())
 ];
 var GOAL9_INDEX = GOALS.length - 1;
 var GOAL_KEYS = ['reduce_time','standardize','scalable_growth','accuracy','client_experience','advisory_services'];
 var PREFILL_GOALS = {{ (goals if goals else none) | tojson }};
+// True once every goal already has an answer -- reached either by finishing
+// the live fill-through, or by arriving via /edit_profile's "Back" link
+// (session goals are only ever saved in full -- see routes.py profile_submit).
+// Governs the accordion's resting state (§27): while this is false the
+// accordion always has exactly one card open (the frontier); once true,
+// "nothing open" becomes the resting state instead.
+var allAnswered = !!PREFILL_GOALS && GOAL_KEYS.every(function(k){ return PREFILL_GOALS[k] !== undefined; });
 var LEVELS = ['None','Low','Medium','High','Top'];
 // §17 item 1 addendum applied here: 'Med' -> 'Medium' (logged earlier, then built
 // into altprofile.html per §24, now promoted into this live page per §25).
@@ -858,10 +861,17 @@ var infoToggles = new Array(GOALS.length).fill(null);
 var scoreEls = new Array(GOALS.length).fill(null);
 var sparkEls = new Array(GOALS.length).fill(null);
 var mounts = new Array(GOALS.length).fill(null);
+// The first goal's interaction hint element (§28) -- set once, in
+// buildCard(0); handleChange() shows/hides it by index 0 only.
+var goalsHintEl = null;
 var frontier = 0;
-// Single-open accordion (§17 item 4 / §24): the one card currently expanded.
-// Starts on card 0, matching its data-state="open" set at creation below.
-var openIndex = 0;
+// Single-open accordion (§17 item 4 / §24): the one card currently expanded,
+// or null when nothing is (§27 -- only reachable once allAnswered). Starts on
+// card 0 for a fresh/partial profile, matching card 0's data-state set at
+// creation below; starts at null when returning with every goal already
+// answered, so the page loads fully collapsed instead of popping the last
+// goal open.
+var openIndex = allAnswered ? null : 0;
 
 function chevronSvg(){
   return '<svg viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -918,15 +928,36 @@ function openCard(i){
   openIndex = i;
 }
 
+// True once the frontier itself is the last goal and that goal has been
+// answered (§27) -- i.e. there's no further goal for the accordion to fall
+// back to. True both mid-session, right after live-answering the last goal,
+// and on load when arriving via /edit_profile with every goal already
+// answered. Governs whether closing the open card means "return to the
+// frontier" (mid-fill) or "nothing open" (done).
+function frontierResolved(){
+  return frontier === GOALS.length - 1 && !!sliders[frontier] && sliders[frontier].isSet;
+}
+
 // Click, or Enter/Space, on an answered card's header (§24 – the companion
 // keyboard fix this needs, since the header was mouse-only before). Opening a
-// different answered card for review closes whatever's currently open;
-// closing the currently-open review card returns to the frontier rather than
-// leaving nothing open. Unscored goals aren't clickable at all (unchanged
-// from §15/§16), so this only ever runs for a goal that's been answered.
+// different answered card for review closes whatever's currently open.
+// Closing the currently-open review card returns to the frontier -- unless
+// the frontier is fully resolved (§27), in which case there's nothing left
+// to return to and it collapses to nothing-open instead. Unscored goals
+// aren't clickable at all (unchanged from §15/§16), so this only ever runs
+// for a goal that's been answered.
 function toggleOrReview(i){
   if (cards[i].dataset.clickable !== 'true') return;
-  openCard(openIndex === i ? frontier : i);
+  if (openIndex !== i) {
+    openCard(i);
+    return;
+  }
+  if (frontierResolved()) {
+    setCardState(i, 'closed');
+    openIndex = null;
+  } else {
+    openCard(frontier);
+  }
 }
 
 // The collapse-and-advance trigger for item 4/5 (§24). Pointer fires this via
@@ -953,10 +984,21 @@ function settleCard(i){
   }
 }
 
+// Live "N of 6 rated" counter (§28) beside the goals header. Recomputed
+// from the sliders themselves rather than tracked incrementally, so it's
+// correct whether it's reacting to a live answer or to a prefilled load.
+function updateGoalsCounter(){
+  var el = document.getElementById('goalsCounter');
+  if (!el) return;
+  var answered = sliders.filter(function(s){ return s && s.isSet; }).length;
+  el.textContent = answered + ' of ' + GOALS.length + ' rated';
+}
+
 function handleChange(i){
   clearValidationMessage();
   updateScoreLabel(i);
   updateSpark(i);
+  updateGoalsCounter();
   var clickable = sliders[i].isSet;
   cards[i].dataset.clickable = clickable ? 'true' : 'false';
   // Keyboard accessibility mirrors the existing mouse-click gating: only an
@@ -968,6 +1010,10 @@ function handleChange(i){
     heads[i].removeAttribute('tabindex');
     heads[i].removeAttribute('role');
   }
+  // First-goal hint (§28): relevant only before goal 1 has been answered.
+  if (i === 0 && goalsHintEl) {
+    goalsHintEl.style.display = sliders[0].isSet ? 'none' : 'flex';
+  }
 }
 
 function buildCard(i){
@@ -976,7 +1022,7 @@ function buildCard(i){
 
   var card = document.createElement('div');
   card.className = 'goal-card';
-  card.dataset.state = (i === 0) ? 'open' : 'closed';
+  card.dataset.state = (!allAnswered && i === 0) ? 'open' : 'closed';
   card.dataset.clickable = 'false';
   // Description shows by default (§26 – flipped from §24's hidden-by-default); the
   // "i" icon hides it, not reveals it.
@@ -984,7 +1030,7 @@ function buildCard(i){
 
   var head = document.createElement('div');
   head.className = 'goal-row-head';
-  head.setAttribute('aria-expanded', (i === 0) ? 'true' : 'false');
+  head.setAttribute('aria-expanded', (!allAnswered && i === 0) ? 'true' : 'false');
 
   var chevron = document.createElement('span');
   chevron.className = 'gc-chevron';
@@ -1040,9 +1086,19 @@ function buildCard(i){
   var descReveal = document.createElement('div');
   descReveal.className = 'gc-desc-reveal';
   descReveal.textContent = goal.desc;
+  body.appendChild(descReveal);
+  // First-goal interaction hint (§28): the segmented bar doesn't look like
+  // a native slider, so this teaches the click/keyboard interaction right
+  // where a first-time user is already looking. Only goal 1 gets it, and
+  // only until it's answered -- handleChange() hides it from there.
+  if (i === 0) {
+    goalsHintEl = document.createElement('div');
+    goalsHintEl.className = 'gc-hint';
+    goalsHintEl.innerHTML = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Click a point on the scale to set the priority';
+    body.appendChild(goalsHintEl);
+  }
   var mount = document.createElement('div');
   mount.className = 'goal-slot';
-  body.appendChild(descReveal);
   body.appendChild(mount);
 
   card.appendChild(head);
@@ -1094,12 +1150,17 @@ function buildCard(i){
 }
 
 for (var gi = 0; gi < GOALS.length; gi++) buildCard(gi);
+updateGoalsCounter();
 
 if (PREFILL_GOALS) {
   var lastAnswered = -1;
   for (var pi = 0; pi < GOALS.length; pi++) { if (sliders[pi].isSet) lastAnswered = pi; }
   frontier = Math.min(lastAnswered + 1, GOALS.length - 1);
-  openCard(frontier);
+  // §27: only force a card open when the frontier is still meaningful (some
+  // goal remains unanswered). When every goal is already answered -- the
+  // /edit_profile "Back" case -- openIndex is already null (set above) and
+  // every card was built collapsed, so the page loads with nothing open.
+  if (!allAnswered) openCard(frontier);
 }
 
 // Goal 9 tracks the Industry field live (§26): changing Industry re-derives its
