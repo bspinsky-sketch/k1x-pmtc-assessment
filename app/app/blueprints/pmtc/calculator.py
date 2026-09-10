@@ -118,27 +118,27 @@ WEIGHT_COEFFICIENTS = {
     "governance_trust": {"accuracy": 2, "client_experience": 2},
 }
 
-# Peer scores: originally ported from Data!D84:E96 ("PEER LEADERS" column,
-# averaged at Data!E97 -- see CLAUDE_problems.md P047 for why this column,
-# not the differently-shaped Data!B27:G39, is the real source). Refreshed
-# 2026-08-30 with updated figures Ben supplied directly (a screenshot of
-# the same "Capability & Maturity Score" / "PEER LEADERS" column, values
-# unchanged in shape from the original table, only the numbers updated).
-# Mean of these 10 values is 4.23, which rounds to the 4.2 shown on Ben's
-# source -- confirms the numbers were transcribed correctly. Still a single
-# flat column with no per-industry breakdown, same as before this refresh
-# -- that remains a real characteristic of the source data, not a shortcut
-# taken here.
+# Peer scores: ported from Data!F85:F94 ("PEER LEADERS" column, averaged at
+# Data!F97) -- see CLAUDE_problems.md P047 for why this column, not the
+# differently-shaped Data!B27:G39, is the real source. Refreshed 2026-09-10
+# directly from K1x PMTC Assessment.xlsx (Ben's live workbook). As of this
+# refresh the workbook carries two "PEER LEADERS" columns (E and F); F is
+# the authoritative one per Ben (E85:E94 is an older/reference column, not
+# wired anywhere in this port). Mean of these 10 values is 4.15, which
+# rounds to the 4.2 shown on Data!F97 -- confirms the numbers were
+# transcribed correctly. Still a single flat column with no per-industry
+# breakdown, same as before this refresh -- that remains a real
+# characteristic of the source data, not a shortcut taken here.
 PEER_SCORES = {
-    "document_intake": 5.0,
-    "inventory_management": 5.0,
-    "data_extraction": 5.0,
+    "document_intake": 4.9,
+    "inventory_management": 4.6,
+    "data_extraction": 4.7,
     "data_validation": 4.0,
-    "data_review": 3.7,
-    "tax_analysis_reporting": 4.9,
+    "data_review": 3.8,
+    "tax_analysis_reporting": 4.7,
     "integration": 3.9,
     "resource_structure": 3.7,
-    "advisory": 3.2,
+    "advisory": 3.3,
     "governance_trust": 3.9,
 }
 PEER_SCORES_BY_INDUSTRY = {industry: dict(PEER_SCORES) for industry in INDUSTRIES}

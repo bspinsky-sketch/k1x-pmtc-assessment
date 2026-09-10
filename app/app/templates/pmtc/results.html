@@ -168,11 +168,19 @@ a{color:inherit;}
    page. See DESIGN_DECISIONS.md §36. */
 .curve-mark[data-mark="target"] circle{fill:var(--ink-deepest);stroke:var(--signal);}
 .curve-mark[data-mark="peer"] circle{fill:var(--score-info);stroke:var(--navy-deep);r:calc(var(--curve-dot,7px) * .85);}
+/* Label position is no longer a fixed CSS transform -- resolveLabelCollisions() in the
+   script below places every label numerically (x/y attributes) and always offsets it from
+   its dot with a short .curve-leader line back to it, nudging any two labels that would
+   otherwise overlap until they clear each other, regardless of where the underlying values
+   land. Applies uniformly whether or not a given pair would have collided, per Ben's
+   2026-09-10 request. text-anchor is still assigned per mark (edge-aware, via anchor()). */
 .curve-mark text{fill:#fff;font-family:var(--font-mono);font-weight:600;
-  font-size:var(--curve-label,10px);letter-spacing:.03em;transform:translateY(-1.1em);}
-.curve-mark[data-mark="peer"] text{transform:translateY(1.85em);fill:rgba(255,255,255,.75);}
+  font-size:var(--curve-label,10px);letter-spacing:.03em;}
+.curve-mark[data-mark="peer"] text{fill:rgba(255,255,255,.75);}
+.curve-leader{stroke:rgba(255,255,255,.38);stroke-width:1;}
 @media screen{
   [data-marks="bare"] .curve-mark text{display:none;}
+  [data-marks="bare"] .curve-leader{display:none;}
   [data-ticks="bare"] .curve-tick-name{display:none;}
   [data-ticks="bare"] .curve-tick-n{transform:translateY(1.9em);}
 }
@@ -673,36 +681,128 @@ a{color:inherit;}
     var stages = opts.stages, height = opts.height || doublingHeight, labels = opts.labels;
     var top = stages.length - 1;
     var step = (CURVE.right - CURVE.left) / top;
-    var points = stages.map(function(name, i){
-      return { level: i, name: name, x: CURVE.left + i * step,
-        y: CURVE.bottom - height(i, top) * (CURVE.bottom - CURVE.top) };
-    });
-    var fitAt = 0;
-    function fit(){
-      var width = Math.round(svg.getBoundingClientRect().width);
-      if (!width || width === fitAt) return;
-      fitAt = width;
-      var toUnits = 620 / width;
-      var label = LABEL_PX * toUnits;
-      svg.style.setProperty('--curve-label', label.toFixed(2) + 'px');
-      svg.style.setProperty('--curve-stroke', (STROKE_PX * toUnits).toFixed(2) + 'px');
-      svg.style.setProperty('--curve-dot', (DOT_PX * toUnits).toFixed(2) + 'px');
-      var named = width >= MARKS_MIN;
-      svg.dataset.marks = named ? 'named' : 'bare';
-      var levelled = width >= TICKS_MIN;
-      svg.dataset.ticks = levelled ? 'named' : 'bare';
-      var t = Math.min(0, CURVE.top - Math.max(named ? 1.82 * label : 0, 11) - 2);
-      var b = Math.max(190, CURVE.bottom + (levelled ? 3.6 : 2.4) * label);
-      svg.setAttribute('viewBox', '0 ' + t.toFixed(1) + ' 620 ' + (b - t).toFixed(1));
-    }
+    var widthAt = 0;
+    var scale = { label: LABEL_PX, stroke: STROKE_PX, dot: DOT_PX, named: true, levelled: true };
+    var lastMarks = null;
+
     var anchor = function(p){
       return p.x > CURVE.right - 70 ? 'end' : p.x < CURVE.left + 70 ? 'start' : 'middle';
     };
+
+    /* Sizing only (label/stroke/dot px-equivalents, named/levelled breakpoints) -- kept
+       separate from layout() so it can run before marks are drawn (font-size has to be set
+       before a label is measured for collision resolution) and again, cheaply, on resize. */
+    function sizeToWidth(){
+      var width = Math.round(svg.getBoundingClientRect().width);
+      if (!width || width === widthAt) return;
+      widthAt = width;
+      var toUnits = 620 / width;
+      scale.label = LABEL_PX * toUnits;
+      scale.stroke = STROKE_PX * toUnits;
+      scale.dot = DOT_PX * toUnits;
+      svg.style.setProperty('--curve-label', scale.label.toFixed(2) + 'px');
+      svg.style.setProperty('--curve-stroke', scale.stroke.toFixed(2) + 'px');
+      svg.style.setProperty('--curve-dot', scale.dot.toFixed(2) + 'px');
+      scale.named = width >= MARKS_MIN;
+      scale.levelled = width >= TICKS_MIN;
+      svg.dataset.marks = scale.named ? 'named' : 'bare';
+      svg.dataset.ticks = scale.levelled ? 'named' : 'bare';
+    }
+
+    /* Nudges every mark label until it clears every other visible object on the chart --
+       other labels, any of the three dots, the curve line, and the baseline axis -- not just
+       other labels (Ben's 2026-09-10 follow-up: a label that no longer overlaps another
+       label but still sits on top of a dot or the curve is still confusing). Every mark
+       always renders offset from its dot with a short .curve-leader line back to it, whether
+       or not it happens to collide with anything, so the chart's look doesn't depend on which
+       marks are close together this time. Measures real DOM boxes (getBBox) rather than
+       estimating text width from character count, so it holds regardless of label text, font,
+       or zoom. Only vertical nudging is used: the curve and axis are both single-valued
+       functions of x (one y per x, never doubling back), and a dot is a small compact circle,
+       so moving a label directly away from its own mark along its established lane always
+       increases clearance from every obstacle type as the step count grows -- no per-obstacle
+       direction logic needed. */
+    function resolveLabelCollisions(markEls, dots, obstacleSamples){
+      var GAP = 3;
+      /* Box positions are tracked here in JS and kept in sync with each push (top/bottom
+         shifted by the same delta as baseY) rather than re-measured from the DOM every pass
+         -- the DOM text position isn't written until the very end, so a getBBox() call mid-
+         loop would just keep returning the original, pre-nudge position and the resolution
+         would never converge. */
+      var boxes = markEls.map(function(m){
+        var b = m.text.getBBox();
+        return { m: m, left: b.x, right: b.x + b.width, top: b.y, bottom: b.y + b.height };
+      });
+      function boxesOverlap(a, b){
+        return a.left < b.right + GAP && a.right > b.left - GAP &&
+               a.top < b.bottom + GAP && a.bottom > b.top - GAP;
+      }
+      function hitsCircle(box, c){
+        var nx = Math.max(box.left, Math.min(c.cx, box.right));
+        var ny = Math.max(box.top, Math.min(c.cy, box.bottom));
+        var dx = c.cx - nx, dy = c.cy - ny;
+        var r = c.r + GAP;
+        return (dx * dx + dy * dy) < r * r;
+      }
+      function hitsSamples(box){
+        for (var k = 0; k < obstacleSamples.length; k++){
+          var s = obstacleSamples[k];
+          if (s.x >= box.left - GAP && s.x <= box.right + GAP &&
+              s.y >= box.top - GAP && s.y <= box.bottom + GAP) return true;
+        }
+        return false;
+      }
+
+      var step = scale.label * 0.9;
+      for (var pass = 0; pass < 14; pass++){
+        var moved = false;
+
+        /* obstacles (dots, curve, axis) first -- always push straight away from the mark's
+           own dot along its established lane, the direction that's always guaranteed to
+           increase clearance from a single-valued curve/axis and a small compact dot. */
+        for (var i = 0; i < boxes.length; i++){
+          var box = boxes[i];
+          var blocked = dots.some(function(c){ return hitsCircle(box, c); }) || hitsSamples(box);
+          if (blocked){
+            var d = box.m.labelDir * step;
+            box.m.baseY += d; box.top += d; box.bottom += d;
+            moved = true;
+          }
+        }
+        if (moved) continue; /* re-check obstacles against the fresh positions before labels */
+
+        /* label-vs-label: push the pair apart from their current positions (not tied to
+           either one's original lane) until their boxes clear. */
+        for (var a = 0; a < boxes.length; a++){
+          for (var b = a + 1; b < boxes.length; b++){
+            if (!boxesOverlap(boxes[a], boxes[b])) continue;
+            moved = true;
+            var aBelowB = boxes[a].m.baseY >= boxes[b].m.baseY;
+            var lo = aBelowB ? boxes[a] : boxes[b];
+            var hi = aBelowB ? boxes[b] : boxes[a];
+            lo.m.baseY += step; lo.top += step; lo.bottom += step;
+            hi.m.baseY -= step; hi.top -= step; hi.bottom -= step;
+          }
+        }
+        if (!moved) break;
+      }
+
+      boxes.forEach(function(box){
+        var m = box.m;
+        m.text.setAttribute('y', m.baseY.toFixed(2));
+        m.leader.setAttribute('y2', (m.baseY - m.labelDir * scale.label * 0.34).toFixed(2));
+      });
+    }
+
     /* All three marks may be fractional (Your Score and Recommended included, not just the
        benchmark), so every mark is placed with curveAt() rather than only the peer mark –
        a deliberate divergence from the source component, which assumed now/target were
        always whole stage indices. */
     function render(state){
+      var points = stages.map(function(name, i){
+        return { level: i, name: name, x: CURVE.left + i * step,
+          y: CURVE.bottom - height(i, top) * (CURVE.bottom - CURVE.top) };
+      });
       var marks = [];
       ['now', 'target', 'peer'].forEach(function(key){
         var v = state[key];
@@ -712,6 +812,16 @@ a{color:inherit;}
         pos.text = labels[key];
         marks.push(pos);
       });
+      lastMarks = { points: points, marks: marks };
+      layout();
+    }
+
+    function layout(){
+      if (!lastMarks) return;
+      sizeToWidth();
+      var points = lastMarks.points, marks = lastMarks.marks;
+      var dotR = scale.dot;
+      var stub = dotR + scale.label * 0.55;
 
       svg.innerHTML =
         '<line class="curve-axis" x1="' + CURVE.left + '" y1="' + CURVE.bottom + '" x2="' + CURVE.right + '" y2="' + CURVE.bottom + '"></line>' +
@@ -723,10 +833,16 @@ a{color:inherit;}
             '<text class="curve-tick-name" x="' + p.x + '" y="' + CURVE.bottom + '" text-anchor="middle">' + esc(p.name) + '</text>' +
             '</g>';
         }).join('') +
-        marks.map(function(p){
+        marks.map(function(p, i){
+          /* peer defaults below its dot, the other two above -- a starting lane only;
+             resolveLabelCollisions() is what actually guarantees no overlap. */
+          var dir = p.mark === 'peer' ? 1 : -1;
+          var baseY = p.y + dir * stub;
           return '<g class="curve-mark" data-mark="' + p.mark + '">' +
             '<circle cx="' + p.x.toFixed(2) + '" cy="' + p.y.toFixed(2) + '"></circle>' +
-            '<text x="' + p.x.toFixed(2) + '" y="' + p.y.toFixed(2) + '" text-anchor="' + anchor(p) + '">' + esc(p.text) + '</text>' +
+            '<line class="curve-leader" data-i="' + i + '" x1="' + p.x.toFixed(2) + '" y1="' + (p.y + dir * dotR).toFixed(2) + '" ' +
+              'x2="' + p.x.toFixed(2) + '" y2="' + (baseY - dir * scale.label * 0.34).toFixed(2) + '"></line>' +
+            '<text data-i="' + i + '" x="' + p.x.toFixed(2) + '" y="' + baseY.toFixed(2) + '" text-anchor="' + anchor(p) + '">' + esc(p.text) + '</text>' +
             '</g>';
         }).join('');
 
@@ -735,11 +851,52 @@ a{color:inherit;}
           '<span class="curve-mark-dot" data-mark="' + p.mark + '" aria-hidden="true"></span>' +
           '<span class="curve-mark-tag">' + esc(p.text) + '</span></span>';
       }).join('');
-      fit();
+
+      if (scale.named && marks.length > 0){
+        var markEls = marks.map(function(p, i){
+          var dir = p.mark === 'peer' ? 1 : -1;
+          return {
+            baseY: p.y + dir * stub,
+            labelDir: dir,
+            text: svg.querySelector('.curve-mark text[data-i="' + i + '"]'),
+            leader: svg.querySelector('.curve-leader[data-i="' + i + '"]')
+          };
+        });
+        var dots = marks.map(function(p){ return { cx: p.x, cy: p.y, r: dotR }; });
+        /* the curve and baseline axis are both obstacles labels must clear too, not just
+           each other's dots -- sampled finely enough (48 points across the full curve, 12
+           across the axis) that no gap in the sampling could let a label sneak through. */
+        var obstacleSamples = [];
+        for (var ci = 0; ci <= 48; ci++) obstacleSamples.push(curveAt(points, (top * ci) / 48));
+        for (var ai = 0; ai <= 12; ai++){
+          obstacleSamples.push({ x: CURVE.left + (CURVE.right - CURVE.left) * ai / 12, y: CURVE.bottom });
+        }
+        resolveLabelCollisions(markEls, dots, obstacleSamples);
+      }
+
+      fitViewBox();
     }
-    if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(svg.parentElement);
-    window.addEventListener('resize', fit);
-    return { render: render, fit: fit };
+
+    /* Sizes the viewBox to whatever the rendered content actually needs (via the real DOM
+       bbox) rather than a fixed heuristic -- self-corrects for however far the collision
+       pass nudged a label, so a label can never be clipped regardless of how many marks
+       ended up needing to move apart. .curve-svg has overflow:visible as a second layer of
+       protection, but this keeps the reserved layout space (and the figcaption below it)
+       accurate too. */
+    function fitViewBox(){
+      var pad = 6;
+      var bounds = null;
+      try { bounds = svg.getBBox(); } catch (e) {}
+      var t = bounds ? Math.min(0, bounds.y - pad) : CURVE.top - 20;
+      var b = bounds ? Math.max(190, bounds.y + bounds.height + pad) : 190;
+      var l = bounds ? Math.min(0, bounds.x - pad) : 0;
+      var r = bounds ? Math.max(620, bounds.x + bounds.width + pad) : 620;
+      svg.setAttribute('viewBox', l.toFixed(1) + ' ' + t.toFixed(1) + ' ' + (r - l).toFixed(1) + ' ' + (b - t).toFixed(1));
+    }
+
+    if (typeof ResizeObserver === 'function') new ResizeObserver(layout).observe(svg.parentElement);
+    window.addEventListener('resize', layout);
+    return { render: render, fit: layout };
   }
 
   var chart = curveChart(document.getElementById('curveSvg'), document.getElementById('curveKey'), {
